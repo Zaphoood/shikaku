@@ -2,6 +2,7 @@
 from __future__ import annotations
 import pygame
 from typing import Optional
+from random import randrange
 
 
 CELL_SIZE = 25
@@ -96,11 +97,117 @@ class Game:
         self.grid = empty_square_grid(grid_size)
         self.rects: list[Rect] = []
         self.numbers = self.generate_numbers()
-        self.numbers[1][1] = 3
         self.number_renderer = NumberRenderer("INSERT-FONT-NAME", FONT_SIZE, GRID_COLOR)
 
     def generate_numbers(self):
-        return empty_square_grid(self.grid_size)
+        total_area = self.grid_size * self.grid_size
+        n_occupied = 0
+        occupied = empty_square_grid(self.grid_size)
+        numbers = empty_square_grid(self.grid_size)
+        rects: list[Rect] = []
+
+        while n_occupied < total_area:
+            n = randrange(total_area - n_occupied)
+            # Find the nth unoccupied cell
+            for y, row in enumerate(occupied):
+                for x, cell in enumerate(row):
+                    if cell:
+                        continue
+                    if not n:
+                        A = [x, y]
+                        # Found one corner of the rect, now find a second one
+                        # Determine available space left and right of A
+                        _x = x
+                        while not occupied[y][_x]:
+                            _x -= 1
+                            if _x < 0:
+                                space_left = x
+                                break
+                        else:
+                            space_left = (x - _x) - 1
+                        _x = x
+                        while not occupied[y][_x]:
+                            _x += 1
+                            if _x > self.grid_size - 1:
+                                space_right = self.grid_size - x - 1
+                                break
+                        else:
+                            space_right = (_x - x) - 1
+                        # Choose x-coordinate of B
+                        B_x = A[0] + randrange(space_left + space_right + 1) - space_left
+                        # Determine available space above and below
+                        _y = y
+                        while not any([occupied[_y][_x] for _x in range(min(A[0], B_x), max(A[0], B_x) + 1)]):
+                            _y -= 1
+                            if _y < 0:
+                                space_above = y
+                                break
+                        else:
+                            space_above = (y - _y) - 1
+                        _y = y
+                        while not any([occupied[_y][_x] for _x in range(min(A[0], B_x), max(A[0], B_x) + 1)]):
+                            _y += 1
+                            if _y > self.grid_size - 1:
+                                space_below = self.grid_size - y - 1
+                                break
+                        else:
+                            space_below = (_y - y) - 1
+                        # Choose y-coordinate of B
+                        B_y = A[1] + randrange(space_above + space_below + 1) - space_above
+                        B = [B_x, B_y]
+                        # Habemus rectiangulum!
+                        rect = [min(A[0], B[0]),
+                                min(A[1], B[1]),
+                                max(A[0], B[0]) - min(A[0], B[0]) + 1,
+                                max(A[1], B[1]) - min(A[1], B[1]) + 1]
+                        # Mark cells of rectangle as occupied
+                        for _x in range(rect[0], rect[0] + rect[2]):
+                            for _y in range(rect[1], rect[1] + rect[3]):
+                                occupied[_y][_x] = 1
+                        # Add area to total number of occupied cells
+                        n_occupied += rect[2] * rect[3]
+                        # Eliminate 1x1 rectangles
+                        rect = Rect(Point(A), Point(B))
+                        rects.append(rect)
+
+                    n -= 1
+
+        i = 0
+        while i < len(rects):
+            if rects[i].width == rects[i].height == 1:
+                # Find adjacent rect and merge
+                for j, other in enumerate(rects):
+                    if other.height == 1 and other.top_left.y == rects[i].top_left.y:
+                        if other.top_left.x == rects[i].top_left.x + 1:
+                            rects[j] = Rect(Point(other.top_left.x - 1, other.top_left.y),
+                                other.bottom_right)
+                            break
+                        elif other.bottom_right.x == rects[i].top_left.x - 1:
+                            rects[j] = Rect(other.top_left,
+                                Point(other.bottom_right.x + 1, other.bottom_right.y))
+                            break
+                    if other.width == 1 and other.top_left.x == rects[i].top_left.x:
+                        if other.top_left.y == rects[i].top_left.y + 1:
+                            rects[j] = Rect(Point(other.top_left.x, other.top_left.y - 1),
+                                other.bottom_right)
+                            break
+                        elif other.bottom_right.y == rects[i].bottom_right.y - 1:
+                            rects[j] = Rect(other.top_left,
+                                Point(other.bottom_right.x, other.bottom_right.y + 1))
+                            break
+                else:
+                    # TODO: Solve this by retrying
+                    #raise Exception("Failed to generate puzzle. (Couldn't merge 1x1 rectangle with neighbour)")
+                    print("Failed to generate puzzle. (Couldn't merge 1x1 rectangle with neighbour)")
+                    i += 1
+                rects.pop(i)
+
+            else:
+                i += 1
+
+        for rect in rects:
+            numbers[rect.top_left.y + randrange(0, rect.height)][rect.top_left.x + randrange(0, rect.width)] = rect.area
+        return numbers
 
     def draw(self, screen: pygame.surface.Surface, pos=[0, 0]):
         # Draw grid
@@ -161,7 +268,6 @@ def main():
     pygame.font.init()
 
     game = Game(10)
-    game.add_rect(Rect(Point(2, 2), Point(5, 5)))
     screen = pygame.display.set_mode([game.total_size, game.total_size])
 
     input_rect: Optional[Rect] = None
