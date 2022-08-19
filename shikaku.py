@@ -6,7 +6,7 @@ from random import randrange
 
 
 CELL_SIZE = 25
-GRID_SIZE = 5
+GRID_SIZE = 10
 GRID_COLOR = (0, 0, 0)
 GRID_DRAWING_POS = (0, 0)
 BACKGROUND_COLOR = (255, 255, 255)
@@ -102,97 +102,101 @@ class Game:
 
     def generate_numbers(self):
         total_area = self.grid_size * self.grid_size
-        n_occupied = 0
-        occupied = empty_square_grid(self.grid_size)
-        numbers = empty_square_grid(self.grid_size)
-        rects: list[Rect] = []
 
-        while n_occupied < total_area:
-            # Choose a random unoccupied cell
-            n = randrange(total_area - n_occupied)
-            for y, row in enumerate(occupied):
-                for x, cell in enumerate(row):
-                    if cell:
-                        continue
-                    if not n:
-                        # One corner of the rectangle
-                        A = [x, y]
-                        # Determine available space left and right of A
-                        _x = x
-                        while True:
-                            if _x < 0 or occupied[y][_x]:
-                                space_left = (x - _x) - 1
-                                break
-                            _x -= 1
-                        _x = x
-                        while True:
-                            if _x >= self.grid_size or occupied[y][_x]:
-                                space_right = (_x - x) - 1
-                                break
-                            _x += 1
-                        # Choose x-coordinate of B
-                        B_x = A[0] - space_left + randrange(space_left + space_right + 1)
-                        # Determine available space above and below
-                        _y = y
-                        while True:
-                            if _y < 0 or any([occupied[_y][_x] for _x in range(min(A[0], B_x), max(A[0], B_x) + 1)]):
-                                space_above = (y - _y) - 1
-                                break
-                            _y -= 1
-                        _y = y
-                        while True:
-                            if _y >= self.grid_size or any([occupied[_y][_x] for _x in range(min(A[0], B_x), max(A[0], B_x) + 1)]):
-                                space_below = (_y - y) - 1
-                                break
-                            _y += 1
-                        B_y = A[1] - space_above + randrange(space_above + space_below + 1)
-                        B = [B_x, B_y]
-                        # Habemus rectiangulum!
-                        rect = [min(A[0], B[0]),
-                                min(A[1], B[1]),
-                                max(A[0], B[0]) - min(A[0], B[0]) + 1,
-                                max(A[1], B[1]) - min(A[1], B[1]) + 1]
-                        # Mark area covered by rectangle as occupied
-                        for _x in range(rect[0], rect[0] + rect[2]):
-                            for _y in range(rect[1], rect[1] + rect[3]):
-                                occupied[_y][_x] = 1
-                        # Add area to total number of occupied cells
-                        n_occupied += rect[2] * rect[3]
-                        rects.append(Rect(Point(A), Point(B)))
-                    n -= 1
+        while True:
+            n_occupied = 0
+            occupied = empty_square_grid(self.grid_size)
+            numbers = empty_square_grid(self.grid_size)
+            rects: list[Rect] = []
 
-        # Eliminate 1x1 rectangles
-        i = 0
-        while i < len(rects):
-            if rects[i].width == rects[i].height == 1:
-                # Find adjacent rect and merge
-                for j, other in enumerate(rects):
-                    if other.height == 1 and other.top_left.y == rects[i].top_left.y:
-                        if other.top_left.x == rects[i].top_left.x + 1:
-                            rects[j] = Rect(Point(other.top_left.x - 1, other.top_left.y),
-                                other.bottom_right)
-                            break
-                        elif other.bottom_right.x == rects[i].top_left.x - 1:
-                            rects[j] = Rect(other.top_left,
-                                Point(other.bottom_right.x + 1, other.bottom_right.y))
-                            break
-                    if other.width == 1 and other.top_left.x == rects[i].top_left.x:
-                        if other.top_left.y == rects[i].top_left.y + 1:
-                            rects[j] = Rect(Point(other.top_left.x, other.top_left.y - 1),
-                                other.bottom_right)
-                            break
-                        elif other.bottom_right.y == rects[i].bottom_right.y - 1:
-                            rects[j] = Rect(other.top_left,
-                                Point(other.bottom_right.x, other.bottom_right.y + 1))
-                            break
+            while n_occupied < total_area:
+                # Choose a random unoccupied cell
+                n = randrange(total_area - n_occupied)
+                for y, row in enumerate(occupied):
+                    for x, cell in enumerate(row):
+                        if cell:
+                            continue
+                        if not n:
+                            # One corner of the rectangle
+                            A = [x, y]
+                            # Determine available space left and right of A
+                            _x = x
+                            while True:
+                                if _x < 0 or occupied[y][_x]:
+                                    space_left = (x - _x) - 1
+                                    break
+                                _x -= 1
+                            _x = x
+                            while True:
+                                if _x >= self.grid_size or occupied[y][_x]:
+                                    space_right = (_x - x) - 1
+                                    break
+                                _x += 1
+                            # Choose x-coordinate of B
+                            B_x = A[0] - space_left + randrange(space_left + space_right + 1)
+                            # Determine available space above and below
+                            _y = y
+                            while True:
+                                if _y < 0 or any([occupied[_y][_x] for _x in range(min(A[0], B_x), max(A[0], B_x) + 1)]):
+                                    space_above = (y - _y) - 1
+                                    break
+                                _y -= 1
+                            _y = y
+                            while True:
+                                if _y >= self.grid_size or any([occupied[_y][_x] for _x in range(min(A[0], B_x), max(A[0], B_x) + 1)]):
+                                    space_below = (_y - y) - 1
+                                    break
+                                _y += 1
+                            B_y = A[1] - space_above + randrange(space_above + space_below + 1)
+                            B = [B_x, B_y]
+                            # Habemus rectiangulum!
+                            rect = [min(A[0], B[0]),
+                                    min(A[1], B[1]),
+                                    max(A[0], B[0]) - min(A[0], B[0]) + 1,
+                                    max(A[1], B[1]) - min(A[1], B[1]) + 1]
+                            # Mark area covered by rectangle as occupied
+                            for _x in range(rect[0], rect[0] + rect[2]):
+                                for _y in range(rect[1], rect[1] + rect[3]):
+                                    occupied[_y][_x] = 1
+                            # Add area to total number of occupied cells
+                            n_occupied += rect[2] * rect[3]
+                            rects.append(Rect(Point(A), Point(B)))
+                        n -= 1
+
+            # Eliminate 1x1 rectangles
+            success = True
+            i = 0
+            while i < len(rects):
+                if rects[i].width == rects[i].height == 1:
+                    # Find adjacent rect and merge
+                    for j, other in enumerate(rects):
+                        if other.height == 1 and other.top_left.y == rects[i].top_left.y:
+                            if other.top_left.x == rects[i].top_left.x + 1:
+                                rects[j] = Rect(Point(other.top_left.x - 1, other.top_left.y),
+                                    other.bottom_right)
+                                break
+                            elif other.bottom_right.x == rects[i].top_left.x - 1:
+                                rects[j] = Rect(other.top_left,
+                                    Point(other.bottom_right.x + 1, other.bottom_right.y))
+                                break
+                        if other.width == 1 and other.top_left.x == rects[i].top_left.x:
+                            if other.top_left.y == rects[i].top_left.y + 1:
+                                rects[j] = Rect(Point(other.top_left.x, other.top_left.y - 1),
+                                    other.bottom_right)
+                                break
+                            elif other.bottom_right.y == rects[i].bottom_right.y - 1:
+                                rects[j] = Rect(other.top_left,
+                                    Point(other.bottom_right.x, other.bottom_right.y + 1))
+                                break
+                    else:
+                        success = False
+                    rects.pop(i)
+
                 else:
-                    # TODO: Solve this by retrying
-                    raise Exception("Failed to generate puzzle, retrying.")
-                rects.pop(i)
+                    i += 1
 
-            else:
-                i += 1
-
+            if success:
+                break
 
         for rect in rects:
             numbers[rect.top_left.y + randrange(rect.height)][rect.top_left.x + randrange(rect.width)] = rect.area
