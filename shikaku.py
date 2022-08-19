@@ -6,11 +6,12 @@ from typing import Optional
 
 CELL_SIZE = 25
 GRID_SIZE = 10
-GRID_COLOR = [0, 0, 0] 
-GRID_DRAWING_POS = [0, 0]
-BACKGROUND_COLOR = [255, 255, 255] 
-RECT_COLOR = [0, 0, 0] 
+GRID_COLOR = (0, 0, 0)
+GRID_DRAWING_POS = (0, 0)
+BACKGROUND_COLOR = (255, 255, 255)
+RECT_COLOR = (0, 0, 0)
 RECT_THICKNESS = 3
+FONT_SIZE = 30
 
 
 class Point:
@@ -64,6 +65,30 @@ class Rect:
             [self.top_left.x * CELL_SIZE + offset[0], self.top_left.y * CELL_SIZE + offset[1],
             self.width * CELL_SIZE + 1, self.height * CELL_SIZE + 1], RECT_THICKNESS)
 
+class NumberRenderer:
+    def __init__(self, font_name: str, font_size: int, color: tuple[int, int, int], font_path: Optional[str] = None):
+        if font_path:
+            self.name = ""
+            self.font_obj = pygame.font.Font(font_path, font_size)
+        else:
+            self.name = font_name
+            self.font_obj = pygame.font.SysFont(font_name, font_size)
+        self.size = font_size
+        self.color = color
+        # Store already rendered numbers
+        self.render_cache: dict[int, pygame.surface.Surface] = {}
+
+    def get(self, number: int) -> pygame.surface.Surface:
+        """Return a Surface with the rendered bitmap of the given number.
+
+        If possible, already cached results will be used."""
+        if not number in self.render_cache:
+            self.render_cache[number] = self._render(number)
+        return self.render_cache[number]
+
+    def _render(self, number: int) -> pygame.surface.Surface:
+        return self.font_obj.render(str(number), True, self.color)
+
 class Game:
     def __init__(self, grid_size):
         self.grid_size = grid_size
@@ -72,11 +97,12 @@ class Game:
         self.rects: list[Rect] = []
         self.numbers = self.generate_numbers()
         self.numbers[1][1] = 3
+        self.number_renderer = NumberRenderer("INSERT-FONT-NAME", FONT_SIZE, GRID_COLOR)
 
     def generate_numbers(self):
         return empty_square_grid(self.grid_size)
 
-    def draw(self, screen, pos=[0, 0]):
+    def draw(self, screen: pygame.surface.Surface, pos=[0, 0]):
         # Draw grid
         for i in range(1, self.grid_size):
             pygame.draw.line(screen, GRID_COLOR, (pos[0] + i * CELL_SIZE, pos[1]),
@@ -90,9 +116,14 @@ class Game:
             rect.draw(screen, GRID_DRAWING_POS)
 
         # Draw numbers
-        for row in self.numbers:
-            for n in row:
-                pass
+        for y, row in enumerate(self.numbers):
+            for x, number in enumerate(row):
+                if number:
+                    rendered = self.number_renderer.get(number)
+                    offset = [int((CELL_SIZE - rendered.get_size()[0]) / 2),
+                        int((CELL_SIZE - rendered.get_size()[1]) / 2)]
+                    # TODO: Properly center
+                    screen.blit(rendered, [x * CELL_SIZE + offset[0], y * CELL_SIZE + offset[1]])
 
     def add_rect(self, new: Rect):
         # Check if rect contained in grid
@@ -121,12 +152,14 @@ class Game:
         return all([all([cell for cell in row]) for row in covered])
 
 def empty_square_grid(size):
-    return [[0 for i in range(size)] for j in range(size)]
+    return [[0 for _ in range(size)] for _ in range(size)]
 
 def pos_to_cell(pos, grid_pos):
     return (int((pos[0] - grid_pos[0]) / CELL_SIZE), int((pos[1] - grid_pos[1]) / CELL_SIZE))
 
 def main():
+    pygame.font.init()
+
     game = Game(10)
     game.add_rect(Rect(Point(2, 2), Point(5, 5)))
     screen = pygame.display.set_mode([game.total_size, game.total_size])
