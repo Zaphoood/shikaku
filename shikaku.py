@@ -6,7 +6,7 @@ from random import randrange
 
 
 CELL_SIZE = 25
-GRID_SIZE = 10
+GRID_SIZE = 5
 GRID_COLOR = (0, 0, 0)
 GRID_DRAWING_POS = (0, 0)
 BACKGROUND_COLOR = (255, 255, 255)
@@ -249,12 +249,19 @@ class Game:
     def verify(self):
         covered = empty_square_grid(self.grid_size)
         for rect in self.rects:
+            contains_number = False
             for x in range(rect.top_left.x, rect.bottom_right.x + 1):
                 for y in range(rect.top_left.y, rect.bottom_right.y + 1):
+                    if self.numbers[y][x]:
+                        if contains_number or not rect.area == self.numbers[y][x]:
+                            return False
+                        contains_number = True
                     if covered[x][y]:
                         # Overlap
                         return False
                     covered[x][y] = 1
+            if not contains_number:
+                return False
 
         return all([all([cell for cell in row]) for row in covered])
 
@@ -267,7 +274,7 @@ def pos_to_cell(pos, grid_pos):
 def main():
     pygame.font.init()
 
-    game = Game(10)
+    game = Game(GRID_SIZE)
     screen = pygame.display.set_mode([game.total_size, game.total_size])
 
     input_rect: Optional[Rect] = None
@@ -292,6 +299,9 @@ def main():
                     start_cell = None
             elif event.type == pygame.MOUSEBUTTONUP:
                 if event.button == 1: # Left click
+                    if not start_cell or not mouse_cell:
+                        # This happens if RMB is released before LMB is released
+                        continue
                     if start_cell == mouse_cell:
                         # If the cursor wasn't moved, delete rect under cursor
                         assert start_cell
@@ -300,6 +310,8 @@ def main():
                         # Place input rect onto grid
                         assert input_rect
                         game.add_rect(input_rect)
+                        if game.verify():
+                            game = Game(GRID_SIZE)
                     input_rect = None
                     start_cell = None
 
