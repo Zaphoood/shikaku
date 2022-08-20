@@ -7,15 +7,15 @@ from typing import Optional
 from random import randrange
 
 
-CELL_SIZE = 50
+CELL_SIZE = 30
 GRID_SIZE = 5
 GRID_SUBSECTIONS = 2
 GRID_COLOR = (0, 0, 0)
-GRID_DRAWING_POS = (10, 10)
+GRID_DRAWING_POS = (0, 0)
 BACKGROUND_COLOR = (255, 255, 255)
 RECT_COLOR = (0, 0, 0)
 RECT_COLOR_INVALID = (255, 100, 100)
-RECT_THICKNESS = 5
+RECT_THICKNESS = 3
 FONT_SIZE = 30
 
 
@@ -31,7 +31,7 @@ class Point:
         else:
             raise TypeError("Point takes either iterable or two integers")
 
-    def __eq__(self, other: Point):
+    def __eq__(self, other: Point) -> bool:
         return self.x == other.x and self.y == other.y
 
 class Rect:
@@ -39,7 +39,7 @@ class Rect:
         self.init(a, b)
         self.color = color
 
-    def init(self, a: Point, b: Point):
+    def init(self, a: Point, b: Point) -> None:
         left = min(a.x, b.x)
         right = max(a.x, b.x)
         bottom = max(a.y, b.y)
@@ -52,21 +52,21 @@ class Rect:
         self.height = (self.bottom_right.y - self.top_left.y + 1)
         self.area = self.width * self.height
 
-    def set_bottom_right(self, new_bottom_right: Point):
+    def set_bottom_right(self, new_bottom_right: Point) -> None:
         self.init(self.top_left, new_bottom_right)
 
-    def set_top_left(self, new_top_left: Point):
+    def set_top_left(self, new_top_left: Point) -> None:
         self.init(new_top_left, self.bottom_right)
 
-    def intersects(self, other: Rect):
+    def intersects(self, other: Rect) -> bool:
         return (self.top_left.x <= other.bottom_right.x and self.bottom_right.x >= other.top_left.x)\
                 and (self.top_left.y <= other.bottom_right.y and self.bottom_right.y >= other.top_left.y)
 
-    def contains_point(self, other: Point):
+    def contains_point(self, other: Point) -> bool:
         return (self.top_left.x <= other.x <= self.bottom_right.x) \
             and (self.top_left.y <= other.y <= self.bottom_right.y)
 
-    def draw(self, screen, offset=[0, 0]):
+    def draw(self, screen, offset=[0, 0]) -> None:
         pygame.draw.rect(screen, self.color,
             [int(self.top_left.x * CELL_SIZE + offset[0] - RECT_THICKNESS / 2),
              int(self.top_left.y * CELL_SIZE + offset[1] - RECT_THICKNESS / 2),
@@ -122,7 +122,7 @@ class Game:
         # TODO: Choose a font
         self.number_renderer = NumberRenderer("sans", FONT_SIZE, GRID_COLOR)
 
-    def generate_numbers(self):
+    def generate_numbers(self) -> list[list[int]]:
         total_area = self.grid_size * self.grid_size
 
         while True:
@@ -224,7 +224,7 @@ class Game:
             numbers[rect.top_left.y + randrange(rect.height)][rect.top_left.x + randrange(rect.width)] = rect.area
         return numbers
 
-    def draw(self, screen: pygame.surface.Surface, pos=[0, 0]):
+    def draw(self, screen: pygame.surface.Surface, pos=[0, 0]) -> None:
         # Draw grid
         for x in range(1, self.grid_size * GRID_SUBSECTIONS):
             for y in range(1, self.grid_size * GRID_SUBSECTIONS):
@@ -251,7 +251,7 @@ class Game:
                         int((CELL_SIZE - rendered.get_size()[1]) / 2)]
                     screen.blit(rendered, [pos[0] + x * CELL_SIZE + offset[0], pos[1] + y * CELL_SIZE + offset[1]])
 
-    def add_rect(self, new: Rect):
+    def add_rect(self, new: Rect) -> None:
         # Check if rect contained in grid
         if 0 <= new.top_left.x < self.grid_size and \
             0 <= new.bottom_right.x < self.grid_size and \
@@ -263,20 +263,20 @@ class Game:
 
         # TODO: Automatically fill in rects that are implicitly created by surrounding rects
 
-    def delete_intersecting(self, point: Point):
+    def delete_intersecting(self, point: Point) -> None:
         # Delete all rects that contain a given point
         self.rects = [rect for rect in self.rects if not rect.contains_point(point)]
 
-    def verify(self):
+    def verify(self) -> bool:
         for rect in self.rects:
             rect.verify(self.numbers)
 
         return sum([rect.area for rect in self.rects]) == self.grid_size * self.grid_size
 
-def empty_square_grid(size):
+def empty_square_grid(size) -> list[list[int]]:
     return [[0 for _ in range(size)] for _ in range(size)]
 
-def pos_to_cell(pos, grid_pos):
+def pos_to_cell(pos, grid_pos) -> tuple[int, int]:
     return (int((pos[0] - grid_pos[0]) / CELL_SIZE), int((pos[1] - grid_pos[1]) / CELL_SIZE))
 
 def main():
