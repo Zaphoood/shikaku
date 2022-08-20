@@ -11,6 +11,7 @@ GRID_COLOR = (0, 0, 0)
 GRID_DRAWING_POS = (0, 0)
 BACKGROUND_COLOR = (255, 255, 255)
 RECT_COLOR = (0, 0, 0)
+RECT_COLOR_INVALID = (255, 100, 100)
 RECT_THICKNESS = 3
 FONT_SIZE = 30
 
@@ -31,8 +32,9 @@ class Point:
         return self.x == other.x and self.y == other.y
 
 class Rect:
-    def __init__(self, a: Point, b: Point):
+    def __init__(self, a: Point, b: Point, color: tuple[int, int, int] = RECT_COLOR):
         self.init(a, b)
+        self.color = color
 
     def init(self, a: Point, b: Point):
         left = min(a.x, b.x)
@@ -62,9 +64,23 @@ class Rect:
             and (self.top_left.y <= other.y <= self.bottom_right.y)
 
     def draw(self, screen, offset=[0, 0]):
-        pygame.draw.rect(screen, RECT_COLOR,
+        pygame.draw.rect(screen, self.color,
             [self.top_left.x * CELL_SIZE + offset[0], self.top_left.y * CELL_SIZE + offset[1],
             self.width * CELL_SIZE + 1, self.height * CELL_SIZE + 1], RECT_THICKNESS)
+
+    def verify(self, numbers: list[list[int]]) -> bool:
+        contains_number = False
+        for x in range(self.top_left.x, self.bottom_right.x + 1):
+            for y in range(self.top_left.y, self.bottom_right.y + 1):
+                if numbers[y][x]:
+                    if contains_number or not self.area == numbers[y][x]:
+                        self.color = RECT_COLOR_INVALID
+                        return False
+                    contains_number = True
+        if not contains_number:
+            self.color = RECT_COLOR_INVALID
+            return False
+        return True
 
 class NumberRenderer:
     def __init__(self, font_name: str, font_size: int, color: tuple[int, int, int], font_path: Optional[str] = None):
@@ -240,23 +256,10 @@ class Game:
         self.rects = [rect for rect in self.rects if not rect.contains_point(point)]
 
     def verify(self):
-        covered = empty_square_grid(self.grid_size)
         for rect in self.rects:
-            contains_number = False
-            for x in range(rect.top_left.x, rect.bottom_right.x + 1):
-                for y in range(rect.top_left.y, rect.bottom_right.y + 1):
-                    if self.numbers[y][x]:
-                        if contains_number or not rect.area == self.numbers[y][x]:
-                            return False
-                        contains_number = True
-                    if covered[x][y]:
-                        # Overlap
-                        return False
-                    covered[x][y] = 1
-            if not contains_number:
-                return False
+            rect.verify(self.numbers)
 
-        return all([all([cell for cell in row]) for row in covered])
+        return sum([rect.area for rect in self.rects]) == self.grid_size * self.grid_size
 
 def empty_square_grid(size):
     return [[0 for _ in range(size)] for _ in range(size)]
