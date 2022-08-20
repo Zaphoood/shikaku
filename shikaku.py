@@ -71,6 +71,7 @@ class Rect:
             and (self.top_left.y <= other.y <= self.bottom_right.y)
 
     def draw(self, screen, offset=[0, 0]) -> None:
+        # Fix bug with rects changing size when going (partially) off-screen
         pygame.draw.rect(screen, self.color,
             [int(self.top_left.x * CELL_SIZE + offset[0] - RECT_THICKNESS / 2),
              int(self.top_left.y * CELL_SIZE + offset[1] - RECT_THICKNESS / 2),
