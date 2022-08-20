@@ -7,15 +7,19 @@ from typing import Optional
 from random import randrange
 
 
-CELL_SIZE = 30
-GRID_SIZE = 5
+CELL_SIZE = 50
+GRID_SIZE = 8
 GRID_SUBSECTIONS = 2
 GRID_COLOR = (0, 0, 0)
 GRID_DRAWING_POS = (0, 0)
 BACKGROUND_COLOR = (255, 255, 255)
 RECT_COLOR = (0, 0, 0)
 RECT_COLOR_INVALID = (255, 100, 100)
+RECT_COLOR_FLOATING = (100, 100, 100)
 RECT_THICKNESS = 3
+DASHED_LINE_THICKNESS = 1
+DASHED_LINE_INTERVAL = 6
+DASHED_LINE_LENGTH = 3
 FONT_SIZE = 30
 
 
@@ -73,6 +77,31 @@ class Rect:
              int(self.width * CELL_SIZE + RECT_THICKNESS),
              int(self.height * CELL_SIZE + RECT_THICKNESS)],
             RECT_THICKNESS)
+
+    def draw_floating(self, screen, offset=[0, 0]) -> None:
+        """Draw rect using dashed lines"""
+        for x in range(self.top_left.x * CELL_SIZE - 1, (self.bottom_right.x + 1) * CELL_SIZE, DASHED_LINE_INTERVAL):
+            pygame.draw.line(screen, RECT_COLOR_FLOATING,
+                    [offset[0] + x, offset[1] + self.top_left.y * CELL_SIZE - 1],
+                    [min(offset[0] + x + DASHED_LINE_LENGTH, (self.bottom_right.x + 1) * CELL_SIZE),
+                        offset[1] + self.top_left.y * CELL_SIZE - 1],
+                    width = DASHED_LINE_THICKNESS)
+            pygame.draw.line(screen, RECT_COLOR_FLOATING,
+                    [offset[0] + x, offset[1] + (self.bottom_right.y + 1) * CELL_SIZE - 1],
+                    [min(offset[0] + x + DASHED_LINE_LENGTH, (self.bottom_right.x + 1) * CELL_SIZE),
+                        offset[1] + (self.bottom_right.y + 1) * CELL_SIZE - 1],
+                    width = DASHED_LINE_THICKNESS)
+        for y in range(self.top_left.y * CELL_SIZE - 1, (self.bottom_right.y + 1) * CELL_SIZE, DASHED_LINE_INTERVAL):
+            pygame.draw.line(screen, RECT_COLOR_FLOATING,
+                    [offset[0] + self.top_left.x * CELL_SIZE - 1, offset[1] + y],
+                    [offset[0] + self.top_left.x * CELL_SIZE - 1,
+                        min(offset[1] + y + DASHED_LINE_LENGTH, (self.bottom_right.y + 1) * CELL_SIZE)],
+                    width = DASHED_LINE_THICKNESS)
+            pygame.draw.line(screen, RECT_COLOR_FLOATING,
+                    [offset[0] + (self.bottom_right.x + 1) * CELL_SIZE - 1, offset[1] + y],
+                    [offset[0] + (self.bottom_right.x + 1) * CELL_SIZE - 1,
+                        min(offset[1] + y + DASHED_LINE_LENGTH, (self.bottom_right.y + 1) * CELL_SIZE)],
+                    width = DASHED_LINE_THICKNESS)
 
     def verify(self, numbers: list[list[int]]) -> bool:
         contains_number = False
@@ -331,7 +360,7 @@ def main():
         screen.fill(BACKGROUND_COLOR)
         game.draw(screen, GRID_DRAWING_POS)
         if input_rect:
-            input_rect.draw(screen, GRID_DRAWING_POS)
+            input_rect.draw_floating(screen, GRID_DRAWING_POS)
         pygame.display.flip() 
 
 if __name__ == "__main__":
