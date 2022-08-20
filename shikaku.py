@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
 from __future__ import annotations
+import os
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 import pygame
 from typing import Optional
 from random import randrange
 
 
-CELL_SIZE = 25
-GRID_SIZE = 10
+CELL_SIZE = 50
+GRID_SIZE = 5
+GRID_SUBSECTIONS = 2
 GRID_COLOR = (0, 0, 0)
-GRID_DRAWING_POS = (0, 0)
+GRID_DRAWING_POS = (10, 10)
 BACKGROUND_COLOR = (255, 255, 255)
 RECT_COLOR = (0, 0, 0)
 RECT_COLOR_INVALID = (255, 100, 100)
-RECT_THICKNESS = 3
+RECT_THICKNESS = 5
 FONT_SIZE = 30
 
 
@@ -65,8 +68,11 @@ class Rect:
 
     def draw(self, screen, offset=[0, 0]):
         pygame.draw.rect(screen, self.color,
-            [self.top_left.x * CELL_SIZE + offset[0], self.top_left.y * CELL_SIZE + offset[1],
-            self.width * CELL_SIZE + 1, self.height * CELL_SIZE + 1], RECT_THICKNESS)
+            [int(self.top_left.x * CELL_SIZE + offset[0] - RECT_THICKNESS / 2),
+             int(self.top_left.y * CELL_SIZE + offset[1] - RECT_THICKNESS / 2),
+             int(self.width * CELL_SIZE + RECT_THICKNESS),
+             int(self.height * CELL_SIZE + RECT_THICKNESS)],
+            RECT_THICKNESS)
 
     def verify(self, numbers: list[list[int]]) -> bool:
         contains_number = False
@@ -220,16 +226,21 @@ class Game:
 
     def draw(self, screen: pygame.surface.Surface, pos=[0, 0]):
         # Draw grid
-        for i in range(1, self.grid_size):
-            pygame.draw.line(screen, GRID_COLOR, (pos[0] + i * CELL_SIZE, pos[1]),
-                (pos[0] + i * CELL_SIZE, pos[1] + self.total_size), 1)
-        for i in range(1, self.grid_size):
-            pygame.draw.line(screen, GRID_COLOR, (pos[0], pos[1] + i * CELL_SIZE),
-                (pos[0] + self.total_size, pos[1] + i * CELL_SIZE), 1)
+        for x in range(1, self.grid_size * GRID_SUBSECTIONS):
+            for y in range(1, self.grid_size * GRID_SUBSECTIONS):
+                if (not x % GRID_SUBSECTIONS) and (not y % GRID_SUBSECTIONS):
+                    pygame.draw.rect(screen, GRID_COLOR,
+                        [int(pos[0] + (x / GRID_SUBSECTIONS) * CELL_SIZE - RECT_THICKNESS / 2),
+                         int(pos[0] + (y / GRID_SUBSECTIONS) * CELL_SIZE - RECT_THICKNESS / 2),
+                         RECT_THICKNESS,
+                         RECT_THICKNESS], 0)
+                elif (not x % GRID_SUBSECTIONS) or (not y % GRID_SUBSECTIONS):
+                    screen.set_at([int(pos[0] + (x / GRID_SUBSECTIONS) * CELL_SIZE), int(pos[0] + (y / GRID_SUBSECTIONS) * CELL_SIZE)],
+                        GRID_COLOR)
 
         # Draw rectangles
         for rect in self.rects:
-            rect.draw(screen, GRID_DRAWING_POS)
+            rect.draw(screen, pos)
 
         # Draw numbers
         for y, row in enumerate(self.numbers):
@@ -238,8 +249,7 @@ class Game:
                     rendered = self.number_renderer.get(number)
                     offset = [int((CELL_SIZE - rendered.get_size()[0]) / 2),
                         int((CELL_SIZE - rendered.get_size()[1]) / 2)]
-                    # TODO: Properly center
-                    screen.blit(rendered, [x * CELL_SIZE + offset[0], y * CELL_SIZE + offset[1]])
+                    screen.blit(rendered, [pos[0] + x * CELL_SIZE + offset[0], pos[1] + y * CELL_SIZE + offset[1]])
 
     def add_rect(self, new: Rect):
         # Check if rect contained in grid
@@ -250,6 +260,8 @@ class Game:
             # Remove existing rects that intersect with the new one
             self.rects = [rect for rect in self.rects if not rect.intersects(new)]
             self.rects.append(new)
+
+        # TODO: Automatically fill in rects that are implicitly created by surrounding rects
 
     def delete_intersecting(self, point: Point):
         # Delete all rects that contain a given point
@@ -271,7 +283,8 @@ def main():
     pygame.font.init()
 
     game = Game(GRID_SIZE)
-    screen = pygame.display.set_mode([game.total_size, game.total_size])
+    screen = pygame.display.set_mode([game.total_size + GRID_DRAWING_POS[0] * 2,
+        game.total_size + GRID_DRAWING_POS[1] * 2])
 
     input_rect: Optional[Rect] = None
     start_cell: Optional[Point] = None
