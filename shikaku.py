@@ -1,14 +1,34 @@
 #!/usr/bin/env python3
 from __future__ import annotations
+
 import os
+
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
-import pygame
-from typing import Optional
 from random import randrange
+from typing import Optional
+
+import pygame
+from screeninfo import get_monitors
 
 
-CELL_SIZE = 50
-GRID_SIZE = 8
+def calc_cell_size(grid_size, cell_base_size) -> int:
+    monitor = get_monitors()[0]
+    screen_scale = 10
+    if monitor.width_mm:
+        screen_scale = monitor.width / monitor.width_mm
+    cell_size = cell_base_size * screen_scale
+    # If too small, scale up
+    if cell_size * grid_size < monitor.height * 0.3:
+        cell_size = (monitor.height * 0.3) / grid_size
+    # If too large, scale down
+    if cell_size * grid_size > monitor.height * 0.75:
+        cell_size = (monitor.height * 0.75) / grid_size
+
+    return round(cell_size)
+
+GRID_SIZE = 10
+CELL_BASE_SIZE = 10
+CELL_SIZE = calc_cell_size(GRID_SIZE, CELL_BASE_SIZE)
 GRID_SUBSECTIONS = 2
 GRID_COLOR = (0, 0, 0)
 GRID_DRAWING_POS = (0, 0)
@@ -308,6 +328,7 @@ def empty_square_grid(size) -> list[list[int]]:
 
 def pos_to_cell(pos, grid_pos) -> tuple[int, int]:
     return (int((pos[0] - grid_pos[0]) / CELL_SIZE), int((pos[1] - grid_pos[1]) / CELL_SIZE))
+
 
 def main():
     pygame.font.init()
