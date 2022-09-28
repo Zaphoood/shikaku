@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+from contextlib import suppress
 
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 from random import randrange
@@ -171,10 +172,10 @@ class Game:
     def __init__(self, grid_size):
         self.grid_size = grid_size
         self.total_size = grid_size * CELL_SIZE
-        # Stores wether a cell is covered
+        # Store for each cell wether it is covered by a rectangle
         self.covered = empty_square_grid(grid_size)
-        self.rects: list[Rect] = []
         self.numbers = self.generate_numbers()
+        self.rects: list[Rect] = []
         # TODO: Choose a font
         self.number_renderer = NumberRenderer("sans", FONT_SIZE, GRID_COLOR)
 
@@ -229,6 +230,7 @@ class Game:
                             B_y = A[1] - space_above + randrange(space_above + space_below + 1)
                             B = [B_x, B_y]
                             # Habemus rectiangulum!
+                            # TODO: Refactor: We don't need this `rect` variable. Just use `A` and `B`
                             rect = [min(A[0], B[0]),
                                     min(A[1], B[1]),
                                     max(A[0], B[0]) - min(A[0], B[0]) + 1,
@@ -270,10 +272,8 @@ class Game:
                     else:
                         success = False
                     rects.pop(i)
-
                 else:
                     i += 1
-
             if success:
                 break
 
@@ -310,18 +310,87 @@ class Game:
 
     def add_rect(self, new: Rect) -> None:
         # Check if rect contained in grid
-        if 0 <= new.top_left.x < self.grid_size and \
+        if not (0 <= new.top_left.x < self.grid_size and \
             0 <= new.bottom_right.x < self.grid_size and \
             0 <= new.top_left.y < self.grid_size and \
-            0 <= new.bottom_right.y < self.grid_size:
-            # Remove existing rects that intersect with the new one
-            intersecting = [i for i, rect in enumerate(self.rects) if rect.intersects(new)]
-            self.delete_rects_by_indices(intersecting)
-            self.rects.append(new)
-            # Set cells as covered
-            for y in range(new.top_left.y, new.bottom_right.y + 1):
-                for x in range(new.top_left.x, new.bottom_right.x + 1):
-                    self.covered[y][x] = 1
+            0 <= new.bottom_right.y < self.grid_size):
+            return
+        # Remove existing rects that intersect with the new one
+        intersecting = [i for i, rect in enumerate(self.rects) if rect.intersects(new)]
+        self.delete_rects_by_indices(intersecting)
+        self.rects.append(new)
+        # Set cells as covered
+        for y in range(new.top_left.y, new.bottom_right.y + 1):
+            for x in range(new.top_left.x, new.bottom_right.x + 1):
+                self.covered[y][x] = 1
+
+        # Add implicitly created rects (rectangle-shaped, uncovered areas enclosed by
+        # other rectangles that contain exactly one number)
+
+        # Find uncovered cells that are horiz. or vert. adjacent to just created rectangle
+        uncovered_neighbours: list[Point] = []
+        def is_covered(p: Point) -> bool:
+            if not (0 <= p.x < self.grid_size and 0 <= p.y < self.grid_size):
+                return True
+            return bool(self.covered[p.y][p.x])
+        def add_if_uncovered(p: Point) -> None:
+            if not is_covered(p):
+                uncovered_neighbours.append(p)
+        def get_adjacent(p: Point) -> list[Point]:
+            return [Point(p.x + 1, p.y), Point(p.x - 1, p.y),
+                    Point(p.x, p.y + 1), Point(p.x, p.y - 1)]
+        def continuous_uncovered(p: Point) -> list[Point]:
+            if is_covered(p):
+                return []
+            # If we visited two numbers, we can abort
+            visited_number = False
+            found = []
+            queue = [p]
+            while queue:
+                current = queue.pop()
+                found.append(current)
+                if self.numbers[current.y][current.x]:
+                    if visited_number:
+                        return []
+                    else:
+                        visited_number = True
+                queue.extend([p for p in get_adjacent(current) if (not is_covered(p) and not p in found and not p in queue)])
+            if visited_number:
+                return found
+            else:
+                return []
+
+        for x in range(new.top_left.x, new.bottom_right.x + 1):
+            add_if_uncovered(Point(x, new.top_left.y - 1))
+            add_if_uncovered(Point(x, new.bottom_right.y + 1))
+        for y in range(new.top_left.y, new.bottom_right.y + 1):
+            add_if_uncovered(Point(new.top_left.x - 1, y))
+            add_if_uncovered(Point(new.bottom_right.x + 1, y))
+        # Group continuous uncovered areas and check if they are rectangles
+        implicit_rects = []
+        while uncovered_neighbours:
+            cont_u = continuous_uncovered(uncovered_neighbours.pop())
+            # Get bounding rect of continuous area
+            min_x = min_y = self.grid_size
+            max_x = max_y = 0
+            for cell in cont_u:
+                min_x = min(min_x, cell.x)
+                max_x = max(max_x, cell.x)
+                min_y = min(min_y, cell.y)
+                max_y = max(max_y, cell.y)
+                with suppress(ValueError): # contextlib.suppress
+                    uncovered_neighbours.remove(cell)
+            # Check if continuous area is equal to it's bounding rect
+            # If their areas differ, it's not a rect
+            if (max_x - min_x + 1) * (max_y - min_y + 1) != len(cont_u):
+                continue
+            # Check if all cells of continuous area are inside rect
+            if not all([min_x <= cell.x <= max_x and min_y <= cell.y <= max_y for cell in cont_u]):
+                continue
+            # TODO: Should implicit rects only be added if they are coorect?
+            implicit_rects.append(Rect(Point(min_x, min_y), Point(max_x, max_y)))
+
+        self.rects.extend(implicit_rects)
 
     def delete_intersecting(self, point: Point) -> None:
         """Delete all rects that contain a given Point"""
