@@ -26,7 +26,7 @@ def calc_cell_size(grid_size, cell_base_size) -> int:
 
     return round(cell_size)
 
-GRID_SIZE = 10
+GRID_SIZE = 5
 CELL_BASE_SIZE = 10
 CELL_SIZE = calc_cell_size(GRID_SIZE, CELL_BASE_SIZE)
 GRID_SUBSECTIONS = 2
@@ -58,6 +58,9 @@ class Point:
 
     def __eq__(self, other: Point) -> bool:
         return self.x == other.x and self.y == other.y
+
+    def __repr__(self) -> str:
+        return f"<Point: x={self.x}, y={self.y}>"
 
 class Rect:
     def __init__(self, a: Point, b: Point, color: tuple[int, int, int] = RECT_COLOR):
@@ -168,7 +171,8 @@ class Game:
     def __init__(self, grid_size):
         self.grid_size = grid_size
         self.total_size = grid_size * CELL_SIZE
-        self.grid = empty_square_grid(grid_size)
+        # Stores wether a cell is covered
+        self.covered = empty_square_grid(grid_size)
         self.rects: list[Rect] = []
         self.numbers = self.generate_numbers()
         # TODO: Choose a font
@@ -311,14 +315,25 @@ class Game:
             0 <= new.top_left.y < self.grid_size and \
             0 <= new.bottom_right.y < self.grid_size:
             # Remove existing rects that intersect with the new one
-            self.rects = [rect for rect in self.rects if not rect.intersects(new)]
+            intersecting = [i for i, rect in enumerate(self.rects) if rect.intersects(new)]
+            self.delete_rects_by_indices(intersecting)
             self.rects.append(new)
-
-        # TODO: Automatically fill in rects that are implicitly created by surrounding rects
+            # Set cells as covered
+            for y in range(new.top_left.y, new.bottom_right.y + 1):
+                for x in range(new.top_left.x, new.bottom_right.x + 1):
+                    self.covered[y][x] = 1
 
     def delete_intersecting(self, point: Point) -> None:
-        # Delete all rects that contain a given point
-        self.rects = [rect for rect in self.rects if not rect.contains_point(point)]
+        """Delete all rects that contain a given Point"""
+        self.delete_rects_by_indices([i for i, rect in enumerate(self.rects) if rect.contains_point(point)])
+
+    def delete_rects_by_indices(self, indices: list[int]) -> None:
+        deleted = [self.rects[i] for i in indices]
+        self.rects = [rect for i, rect in enumerate(self.rects) if i not in indices]
+        for rect in deleted:
+            for y in range(rect.top_left.y, rect.bottom_right.y + 1):
+                for x in range(rect.top_left.x, rect.bottom_right.x + 1):
+                    self.covered[y][x] = 0
 
     def verify(self) -> bool:
         for rect in self.rects:
