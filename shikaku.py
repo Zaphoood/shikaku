@@ -41,6 +41,7 @@ DASHED_LINE_THICKNESS = 1
 DASHED_LINE_INTERVAL = 6
 DASHED_LINE_LENGTH = 3
 FONT_SIZE = 30
+FRAMERATE = 60
 
 
 class Point:
@@ -125,6 +126,7 @@ class Rect:
                     width = DASHED_LINE_THICKNESS)
 
     def verify(self, numbers: list[list[int]]) -> bool:
+        # TODO: Fix case where on rect covers entire grid
         contains_number = False
         for x in range(self.top_left.x, self.bottom_right.x + 1):
             for y in range(self.top_left.y, self.bottom_right.y + 1):
@@ -175,6 +177,7 @@ class Game:
     def generate_numbers(self) -> list[list[int]]:
         total_area = self.grid_size * self.grid_size
 
+        # TODO: Limit maximum rect area to be certain fraction of grid
         while True:
             n_occupied = 0
             occupied = empty_square_grid(self.grid_size)
@@ -342,7 +345,9 @@ def main():
     mouse_cell: Optional[Point] = None
 
     running = True
+    clock = pygame.time.Clock()
     while running:
+        clock.tick(FRAMERATE)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
