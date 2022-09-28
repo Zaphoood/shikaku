@@ -19,16 +19,18 @@ def calc_cell_size(grid_size, cell_base_size) -> int:
         screen_scale = monitor.width / monitor.width_mm
     cell_size = cell_base_size * screen_scale
     # If too small, scale up
-    if cell_size * grid_size < monitor.height * 0.3:
-        cell_size = (monitor.height * 0.3) / grid_size
+    if cell_size * grid_size < monitor.height * MIN_SCREEN_PERC:
+        cell_size = (monitor.height * MIN_SCREEN_PERC) / grid_size
     # If too large, scale down
-    if cell_size * grid_size > monitor.height * 0.75:
-        cell_size = (monitor.height * 0.75) / grid_size
+    if cell_size * grid_size > monitor.height * MAX_SCREEN_PERC:
+        cell_size = (monitor.height * MAX_SCREEN_PERC) / grid_size
 
     return round(cell_size)
 
-GRID_SIZE = 5
+GRID_SIZE = 8
 CELL_BASE_SIZE = 10
+MIN_SCREEN_PERC = 0.25
+MAX_SCREEN_PERC = 0.75
 CELL_SIZE = calc_cell_size(GRID_SIZE, CELL_BASE_SIZE)
 GRID_SUBSECTIONS = 2
 GRID_COLOR = (0, 0, 0)
@@ -130,7 +132,6 @@ class Rect:
                     width = DASHED_LINE_THICKNESS)
 
     def verify(self, numbers: list[list[int]]) -> bool:
-        # TODO: Fix case where on rect covers entire grid
         contains_number = False
         for x in range(self.top_left.x, self.bottom_right.x + 1):
             for y in range(self.top_left.y, self.bottom_right.y + 1):
@@ -172,10 +173,10 @@ class Game:
     def __init__(self, grid_size):
         self.grid_size = grid_size
         self.total_size = grid_size * CELL_SIZE
+        self.rects: list[Rect] = []
         # Store for each cell wether it is covered by a rectangle
         self.covered = empty_square_grid(grid_size)
         self.numbers = self.generate_numbers()
-        self.rects: list[Rect] = []
         # TODO: Choose a font
         self.number_renderer = NumberRenderer("sans", FONT_SIZE, GRID_COLOR)
 
@@ -230,18 +231,14 @@ class Game:
                             B_y = A[1] - space_above + randrange(space_above + space_below + 1)
                             B = [B_x, B_y]
                             # Habemus rectiangulum!
-                            # TODO: Refactor: We don't need this `rect` variable. Just use `A` and `B`
-                            rect = [min(A[0], B[0]),
-                                    min(A[1], B[1]),
-                                    max(A[0], B[0]) - min(A[0], B[0]) + 1,
-                                    max(A[1], B[1]) - min(A[1], B[1]) + 1]
+                            rect = Rect(Point(A), Point(B))
                             # Mark area covered by rectangle as occupied
-                            for _x in range(rect[0], rect[0] + rect[2]):
-                                for _y in range(rect[1], rect[1] + rect[3]):
+                            for _x in range(rect.top_left.x, rect.bottom_right.x + 1):
+                                for _y in range(rect.top_left.y, rect.bottom_right.y + 1):
                                     occupied[_y][_x] = 1
                             # Add area to total number of occupied cells
-                            n_occupied += rect[2] * rect[3]
-                            rects.append(Rect(Point(A), Point(B)))
+                            n_occupied += rect.width * rect.height
+                            rects.append(rect)
                         n -= 1
 
             # Eliminate 1x1 rectangles
@@ -387,7 +384,7 @@ class Game:
             # Check if all cells of continuous area are inside rect
             if not all([min_x <= cell.x <= max_x and min_y <= cell.y <= max_y for cell in cont_u]):
                 continue
-            # TODO: Should implicit rects only be added if they are coorect?
+            # TODO: Should implicit rects only be added if they are correct?
             implicit_rects.append(Rect(Point(min_x, min_y), Point(max_x, max_y)))
 
         self.rects.extend(implicit_rects)
@@ -405,10 +402,7 @@ class Game:
                     self.covered[y][x] = 0
 
     def verify(self) -> bool:
-        for rect in self.rects:
-            rect.verify(self.numbers)
-
-        return sum([rect.area for rect in self.rects]) == self.grid_size * self.grid_size
+        return all([rect.verify(self.numbers) for rect in self.rects]) and sum([rect.area for rect in self.rects]) == self.grid_size * self.grid_size
 
 def empty_square_grid(size) -> list[list[int]]:
     return [[0 for _ in range(size)] for _ in range(size)]
