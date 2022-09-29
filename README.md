@@ -4,7 +4,7 @@ A fun and challenging puzzle game. My implementation was inspired by [this](http
 
 ## Rules
 
-You have to divide the grid into rectangular and square pieces such that each piece contains exactly one number, and that number represents the area of the rectangle. ([Source](https://www.puzzle-shikaku.com/))
+You have to divide the grid into rectangular pieces such that each piece contains exactly one number, and that number is equal the area of the rectangle. ([Source](https://www.puzzle-shikaku.com/))
 
 ## Installation
 
@@ -16,3 +16,12 @@ python -m pip install pygame
 ## Usage
 
 To start the game, simply run `./shikaku.py`. Have fun!
+
+## Example
+
+This is what a solved game might look like:
+
+<p align="center">
+  <br>
+  <img src="./examples/solved.png" width="50%"/>
+</p>
