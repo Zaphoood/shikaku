@@ -43,7 +43,9 @@ RECT_THICKNESS = 3
 DASHED_LINE_THICKNESS = 1
 DASHED_LINE_INTERVAL = 6
 DASHED_LINE_LENGTH = 3
-FONT_SIZE = 30
+FONT = "ubuntumono"
+BASE_FONT_SIZE = 45
+FONT_SIZE = int(min(BASE_FONT_SIZE, CELL_SIZE * 0.85))
 FRAMERATE = 60
 
 
@@ -99,6 +101,7 @@ class Rect:
 
     def draw(self, screen, offset=[0, 0]) -> None:
         # Fix bug with rects changing size when going (partially) off-screen
+        # TODO: Fix off-by-one error with rect drawing
         pygame.draw.rect(screen, self.color,
             [int(self.top_left.x * CELL_SIZE + offset[0] - RECT_THICKNESS / 2),
              int(self.top_left.y * CELL_SIZE + offset[1] - RECT_THICKNESS / 2),
@@ -151,6 +154,8 @@ class NumberRenderer:
             self.name = ""
             self.font_obj = pygame.font.Font(font_path, font_size)
         else:
+            if not font_name in pygame.font.get_fonts():
+                print(f"Font not available: '{font_name}'. Using fallback.")
             self.name = font_name
             self.font_obj = pygame.font.SysFont(font_name, font_size)
         self.size = font_size
@@ -177,8 +182,7 @@ class Game:
         # Store for each cell wether it is covered by a rectangle
         self.covered = empty_square_grid(grid_size)
         self.numbers = self.generate_numbers()
-        # TODO: Choose a font
-        self.number_renderer = NumberRenderer("sans", FONT_SIZE, GRID_COLOR)
+        self.number_renderer = NumberRenderer(FONT, FONT_SIZE, GRID_COLOR)
 
     def generate_numbers(self) -> list[list[int]]:
         total_area = self.grid_size * self.grid_size
