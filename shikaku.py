@@ -43,6 +43,7 @@ RECT_THICKNESS = 3
 DASHED_LINE_THICKNESS = 1
 DASHED_LINE_INTERVAL = 6
 DASHED_LINE_LENGTH = 3
+CAPTION = "Shikaku"
 FONT = "ubuntumono"
 BASE_FONT_SIZE = 45
 FONT_SIZE = int(min(BASE_FONT_SIZE, CELL_SIZE * 0.85))
@@ -421,6 +422,7 @@ def main():
     game = Game(GRID_SIZE)
     screen = pygame.display.set_mode([game.total_size + GRID_DRAWING_POS[0] * 2,
         game.total_size + GRID_DRAWING_POS[1] * 2])
+    pygame.display.set_caption(CAPTION)
 
     input_rect: Optional[Rect] = None
     start_cell: Optional[Point] = None
