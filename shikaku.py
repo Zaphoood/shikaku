@@ -179,8 +179,10 @@ class NumberRenderer:
 class Game:
     def __init__(self, grid_size):
         self.grid_size = grid_size
+        self.grid_area = grid_size * grid_size
         self.total_size = grid_size * CELL_SIZE
         self.rects: list[Rect] = []
+        self.rect_area = 0
         # Store for each cell wether it is covered by a rectangle
         self.covered = empty_square_grid(grid_size)
         self.numbers = self.generate_numbers()
@@ -243,7 +245,7 @@ class Game:
                                 for _y in range(rect.top_left.y, rect.bottom_right.y + 1):
                                     occupied[_y][_x] = 1
                             # Add area to total number of occupied cells
-                            n_occupied += rect.width * rect.height
+                            n_occupied += rect.area
                             rects.append(rect)
                         n -= 1
 
@@ -321,6 +323,7 @@ class Game:
         intersecting = [i for i, rect in enumerate(self.rects) if rect.intersects(new)]
         self.delete_rects_by_indices(intersecting)
         self.rects.append(new)
+        self.rect_area += new.area
         # Set cells as covered
         for y in range(new.top_left.y, new.bottom_right.y + 1):
             for x in range(new.top_left.x, new.bottom_right.x + 1):
@@ -393,6 +396,7 @@ class Game:
             implicit_rects.append(Rect(Point(min_x, min_y), Point(max_x, max_y)))
 
         self.rects.extend(implicit_rects)
+        self.rect_area += sum(rect.area for rect in implicit_rects)
 
     def delete_intersecting(self, point: Point) -> None:
         """Delete all rects that contain a given Point"""
@@ -402,12 +406,13 @@ class Game:
         deleted = [self.rects[i] for i in indices]
         self.rects = [rect for i, rect in enumerate(self.rects) if i not in indices]
         for rect in deleted:
+            self.rect_area -= rect.area
             for y in range(rect.top_left.y, rect.bottom_right.y + 1):
                 for x in range(rect.top_left.x, rect.bottom_right.x + 1):
                     self.covered[y][x] = 0
 
     def verify(self) -> bool:
-        return all([rect.verify(self.numbers) for rect in self.rects]) and sum([rect.area for rect in self.rects]) == self.grid_size * self.grid_size
+        return all(rect.verify(self.numbers) for rect in self.rects) and self.rect_area == self.grid_area
 
 def empty_square_grid(size) -> list[list[int]]:
     return [[0 for _ in range(size)] for _ in range(size)]
