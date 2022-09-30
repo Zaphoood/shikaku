@@ -200,8 +200,11 @@ class Game:
             while n_occupied < total_area:
                 # Choose a random unoccupied cell
                 n = randrange(total_area - n_occupied)
+                done = False
                 for y, row in enumerate(occupied):
                     for x, cell in enumerate(row):
+                        if done:
+                            break
                         if cell:
                             continue
                         if not n:
@@ -246,6 +249,7 @@ class Game:
                             # Add area to total number of occupied cells
                             n_occupied += rect.area
                             rects.append(rect)
+                            done = True
                         n -= 1
 
             # Eliminate 1x1 rectangles
