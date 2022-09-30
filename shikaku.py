@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import os
-from contextlib import suppress
 
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 from random import randrange
@@ -333,67 +332,161 @@ class Game:
         # other rectangles that contain exactly one number)
 
         # Find uncovered cells that are horiz. or vert. adjacent to just created rectangle
-        uncovered_neighbours: list[Point] = []
-        def is_covered(p: Point) -> bool:
-            if not (0 <= p.x < self.grid_size and 0 <= p.y < self.grid_size):
+        def is_covered(x: int, y: int) -> bool:
+            if not (0 <= x < self.grid_size and 0 <= y < self.grid_size):
                 return True
-            return bool(self.covered[p.y][p.x])
-        def add_if_uncovered(p: Point) -> None:
-            if not is_covered(p):
-                uncovered_neighbours.append(p)
-        def get_adjacent(p: Point) -> list[Point]:
-            return [Point(p.x + 1, p.y), Point(p.x - 1, p.y),
-                    Point(p.x, p.y + 1), Point(p.x, p.y - 1)]
-        def continuous_uncovered(p: Point) -> list[Point]:
-            if is_covered(p):
-                return []
-            # If we visited two numbers, we can abort
-            visited_number = False
-            found = []
-            queue = [p]
-            while queue:
-                current = queue.pop()
-                found.append(current)
-                if self.numbers[current.y][current.x]:
-                    if visited_number:
-                        return []
-                    else:
-                        visited_number = True
-                queue.extend([p for p in get_adjacent(current) if (not is_covered(p) and not p in found and not p in queue)])
-            if visited_number:
-                return found
-            else:
-                return []
-
+            return bool(self.covered[y][x])
+        above = []
+        below = []
+        left = []
+        right = []
         for x in range(new.top_left.x, new.bottom_right.x + 1):
-            add_if_uncovered(Point(x, new.top_left.y - 1))
-            add_if_uncovered(Point(x, new.bottom_right.y + 1))
+            if not is_covered(x, new.top_left.y - 1):
+                above.append([x, new.top_left.y - 1])
+            if not is_covered(x, new.bottom_right.y + 1):
+                below.append([x, new.bottom_right.y + 1])
         for y in range(new.top_left.y, new.bottom_right.y + 1):
-            add_if_uncovered(Point(new.top_left.x - 1, y))
-            add_if_uncovered(Point(new.bottom_right.x + 1, y))
-        # Group continuous uncovered areas and check if they are rectangles
+            if not is_covered(new.top_left.x - 1, y):
+                left.append([new.top_left.x - 1, y])
+            if not is_covered(new.bottom_right.x + 1, y):
+                right.append([new.bottom_right.x + 1, y])
+
         implicit_rects = []
-        while uncovered_neighbours:
-            cont_u = continuous_uncovered(uncovered_neighbours.pop())
-            # Get bounding rect of continuous area
-            min_x = min_y = self.grid_size
-            max_x = max_y = 0
-            for cell in cont_u:
-                min_x = min(min_x, cell.x)
-                max_x = max(max_x, cell.x)
-                min_y = min(min_y, cell.y)
-                max_y = max(max_y, cell.y)
-                with suppress(ValueError): # contextlib.suppress
-                    uncovered_neighbours.remove(cell)
-            # Check if continuous area is equal to it's bounding rect
-            # If their areas differ, it's not a rect
-            if (max_x - min_x + 1) * (max_y - min_y + 1) != len(cont_u):
+        # This has a worst-case complexity of O(N^3), however the worst case is rarely reached.
+        # It will mostly be just O(N^2), since there will be only one continuous block of uncovered cells
+        # directly adjacent to one side of the rectangle, so that above == [] after the first iteration.
+        while above:
+            cell = above.pop()
+            left_bound = right_bound = cell[0]
+            while not is_covered(left_bound, cell[1]):
+                left_bound -= 1
+            while not is_covered(right_bound, cell[1]):
+                right_bound += 1
+            # Assert lower bound consists of covered cells
+            if not all(is_covered(x, new.top_left.y) for x in range(left_bound + 1, right_bound)):
                 continue
-            # Check if all cells of continuous area are inside rect
-            if not all([min_x <= cell.x <= max_x and min_y <= cell.y <= max_y for cell in cont_u]):
+            lower_bound = cell[1]
+            visited_numbers = 0
+            failed = False
+            while not failed:
+                # Check for upper bound
+                if lower_bound < cell[1] and any(is_covered(x, lower_bound) for x in range(left_bound + 1, right_bound)):
+                    break
+                if not is_covered(left_bound, lower_bound) or not is_covered(right_bound, lower_bound):
+                    failed = True
+                    break
+                visited_numbers += sum(bool(self.numbers[lower_bound][x]) for x in range(left_bound + 1, right_bound))
+                if visited_numbers > 1:
+                    failed = True
+                    break
+                # Remove visited cells
+                above = [cell for cell in above if not (left_bound < cell[0] < right_bound and cell[1] == lower_bound)]
+                lower_bound -= 1
+
+            if failed or visited_numbers != 1:
                 continue
-            # TODO: Should implicit rects only be added if they are correct?
-            implicit_rects.append(Rect(Point(min_x, min_y), Point(max_x, max_y)))
+            if all(is_covered(x, lower_bound) for x in range(left_bound + 1, right_bound)) and \
+                (right_bound - left_bound - 1 + new.top_left.y - lower_bound - 1) > 2:
+                implicit_rects.append(Rect(Point(left_bound + 1, lower_bound + 1), Point(right_bound - 1, new.top_left.y - 1)))
+        while below:
+            cell = below.pop()
+            left_bound = right_bound = cell[0]
+            while not is_covered(left_bound, cell[1]):
+                left_bound -= 1
+            while not is_covered(right_bound, cell[1]):
+                right_bound += 1
+            # Assert upper bound consists of covered cells
+            if not all(is_covered(x, new.bottom_right.y) for x in range(left_bound - 1, right_bound)):
+                continue
+            lower_bound = cell[1]
+            visited_numbers = 0
+            failed = False
+            while not failed:
+                # Check for upper bound
+                if lower_bound > cell[1] and any(is_covered(x, lower_bound) for x in range(left_bound + 1, right_bound)):
+                    break
+                if not is_covered(left_bound, lower_bound) or not is_covered(right_bound, lower_bound):
+                    failed = True
+                    break
+                visited_numbers += sum(bool(self.numbers[lower_bound][x]) for x in range(left_bound + 1, right_bound))
+                if visited_numbers > 1:
+                    failed = True
+                    break
+                # Remove visited cells
+                below = [cell for cell in below if not (left_bound < cell[0] < right_bound and cell[1] == lower_bound)]
+                lower_bound += 1
+
+            if failed or visited_numbers != 1:
+                continue
+            if all(is_covered(x, lower_bound) for x in range(left_bound + 1, right_bound)) and \
+                (right_bound - left_bound - 1 + lower_bound - new.bottom_right.y - 1) > 2:
+                implicit_rects.append(Rect(Point(left_bound + 1, new.bottom_right.y + 1), Point(right_bound - 1, lower_bound - 1)))
+        while right:
+            cell = right.pop()
+            upper_bound = lower_bound = cell[1]
+            while not is_covered(cell[0], upper_bound):
+                upper_bound -= 1
+            while not is_covered(cell[0], lower_bound):
+                lower_bound += 1
+            # Assert left bound consists of covered cells
+            if not all(is_covered(new.bottom_right.x, y) for y in range(upper_bound + 1, lower_bound)):
+                continue
+            right_bound = cell[0]
+            visited_numbers = 0
+            failed = False
+            while not failed:
+                # Check for upper bound
+                if right_bound > cell[0] and any(is_covered(right_bound, y) for y in range(upper_bound + 1, lower_bound)):
+                    break
+                if not is_covered(right_bound, upper_bound) or not is_covered(right_bound, lower_bound):
+                    failed = True
+                    break
+                visited_numbers += sum(bool(self.numbers[y][right_bound]) for y in range(upper_bound + 1, lower_bound))
+                if visited_numbers > 1:
+                    failed = True
+                    break
+                # Remove visited cells
+                right = [cell for cell in right if not (upper_bound < cell[1] < lower_bound and cell[0] == right_bound)]
+                right_bound += 1
+
+            if failed or visited_numbers != 1:
+                continue
+            if all(is_covered(right_bound, y) for y in range(upper_bound + 1, lower_bound)) and \
+                (lower_bound - upper_bound - 1 + right_bound - new.bottom_right.x - 1) > 2:
+                implicit_rects.append(Rect(Point(new.bottom_right.x + 1, upper_bound + 1), Point(right_bound - 1, lower_bound - 1)))
+        while left:
+            cell = left.pop()
+            upper_bound = lower_bound = cell[1]
+            while not is_covered(cell[0], upper_bound):
+                upper_bound -= 1
+            while not is_covered(cell[0], lower_bound):
+                lower_bound += 1
+            # Assert right bound consists of covered cells
+            if not all(is_covered(new.top_left.x, y) for y in range(upper_bound + 1, lower_bound)):
+                continue
+            left_bound = cell[0]
+            visited_numbers = 0
+            failed = False
+            while not failed:
+                # Check for upper bound
+                if left_bound < cell[0] and any(is_covered(left_bound, y) for y in range(upper_bound + 1, lower_bound)):
+                    break
+                if not is_covered(left_bound, upper_bound) or not is_covered(left_bound, lower_bound):
+                    failed = True
+                    break
+                visited_numbers += sum(bool(self.numbers[y][left_bound]) for y in range(upper_bound + 1, lower_bound))
+                if visited_numbers > 1:
+                    failed = True
+                    break
+                # Remove visited cells
+                left = [cell for cell in left if not (upper_bound < cell[1] < lower_bound and cell[0] == left_bound)]
+                left_bound -= 1
+
+            if failed or visited_numbers != 1:
+                continue
+            if all(is_covered(left_bound, y) for y in range(upper_bound + 1, lower_bound)) and \
+                (lower_bound - upper_bound - 1 + new.top_left.x - left_bound - 1) > 2:
+                implicit_rects.append(Rect(Point(left_bound + 1, upper_bound + 1), Point(new.top_left.x - 1, lower_bound - 1)))
 
         self.rects.extend(implicit_rects)
         self.rect_area += sum(rect.area for rect in implicit_rects)
