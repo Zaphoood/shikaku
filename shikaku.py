@@ -73,6 +73,7 @@ class Rect:
     def __init__(self, a: Point, b: Point, color: tuple[int, int, int] = RECT_COLOR):
         self.init(a, b)
         self.color = color
+        self._valid: Optional[bool] = None
 
     def init(self, a: Point, b: Point) -> None:
         left = min(a.x, b.x)
@@ -87,14 +88,8 @@ class Rect:
         self.height = (self.bottom_right.y - self.top_left.y + 1)
         self.area = self.width * self.height
 
-    def set_bottom_right(self, new_bottom_right: Point) -> None:
-        self.init(self.top_left, new_bottom_right)
-
-    def set_top_left(self, new_top_left: Point) -> None:
-        self.init(new_top_left, self.bottom_right)
-
     def intersects(self, other: Rect) -> bool:
-        return (self.top_left.x <= other.bottom_right.x and self.bottom_right.x >= other.top_left.x)\
+        return (self.top_left.x <= other.bottom_right.x and self.bottom_right.x >= other.top_left.x) \
                 and (self.top_left.y <= other.bottom_right.y and self.bottom_right.y >= other.top_left.y)
 
     def contains_point(self, other: Point) -> bool:
@@ -137,18 +132,25 @@ class Rect:
                     min(offset[1] + y + DASHED_LINE_LENGTH, (self.bottom_right.y + 1) * CELL_SIZE)],
                 width = DASHED_LINE_THICKNESS)
 
+    def is_valid(self) -> Optional[bool]:
+        """Returns validity if it has been checked, otherwise None."""
+        return self._valid
+
     def verify(self, numbers: list[list[int]]) -> bool:
         contains_number = False
         for x in range(self.top_left.x, self.bottom_right.x + 1):
             for y in range(self.top_left.y, self.bottom_right.y + 1):
                 if numbers[y][x]:
                     if contains_number or not self.area == numbers[y][x]:
+                        self._valid = False
                         self.color = RECT_COLOR_INVALID
                         return False
                     contains_number = True
         if not contains_number:
+            self._valid = False
             self.color = RECT_COLOR_INVALID
             return False
+        self._valid = True
         return True
 
 class NumberRenderer:
@@ -309,9 +311,17 @@ class Game:
                         [round(pos[0] + (x / GRID_SUBSECTIONS) * CELL_SIZE),
                          round(pos[0] + (y / GRID_SUBSECTIONS) * CELL_SIZE)],
                         GRID_COLOR)
-        # Draw rectangles
-        for rect in self.rects:
-            rect.draw(screen, pos)
+        # List of rectangles to draw on top (i. e. after the rest of the rectangles)
+        # Invalid rectangles are thereby highlighted
+        on_top = []
+        for i, rect in enumerate(self.rects):
+            if rect.is_valid() == False:
+                on_top.append(i)
+            else:
+                rect.draw(screen, pos)
+        for i in on_top:
+            self.rects[i].draw(screen, pos)
+
         # Draw numbers
         for y, row in enumerate(self.numbers):
             for x, number in enumerate(row):
@@ -565,8 +575,9 @@ def main():
                         game.delete_intersecting(start_cell)
                     else:
                         # Place input rect onto grid
-                        # TODO: Solve this without an `assert`
-                        assert input_rect
+                        if not input_rect:
+                            print("ERROR: Couldn't create rect")
+                            continue
                         game.add_rect(input_rect)
                         if game.verify():
                             game = Game(GRID_SIZE)
