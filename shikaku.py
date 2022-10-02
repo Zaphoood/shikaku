@@ -18,18 +18,20 @@ def calc_cell_size(grid_size, cell_base_size) -> int:
         screen_scale = monitor.width / monitor.width_mm
     cell_size = cell_base_size * screen_scale
     # If too small, scale up
-    if cell_size * grid_size < monitor.height * MIN_SCREEN_PERC:
-        cell_size = (monitor.height * MIN_SCREEN_PERC) / grid_size
+    if cell_size * grid_size < monitor.height * WIN_MIN_SCREEN_PERC:
+        cell_size = (monitor.height * WIN_MIN_SCREEN_PERC) / grid_size
     # If too large, scale down
-    if cell_size * grid_size > monitor.height * MAX_SCREEN_PERC:
-        cell_size = (monitor.height * MAX_SCREEN_PERC) / grid_size
+    if cell_size * grid_size > monitor.height * WIN_MAX_SCREEN_PERC:
+        cell_size = (monitor.height * WIN_MAX_SCREEN_PERC) / grid_size
 
     return round(cell_size)
 
 GRID_SIZE = 10
+# Maximum area of a rect compared to the total area of the grid
+RECT_MAX_GRID_PERC = 0.15
 CELL_BASE_SIZE = 10
-MIN_SCREEN_PERC = 0.25
-MAX_SCREEN_PERC = 0.75
+WIN_MIN_SCREEN_PERC = 0.25
+WIN_MAX_SCREEN_PERC = 0.75
 CELL_SIZE = calc_cell_size(GRID_SIZE, CELL_BASE_SIZE)
 GRID_SUBSECTIONS = 2
 GRID_COLOR = (0, 0, 0)
@@ -190,7 +192,6 @@ class Game:
     def generate_numbers(self) -> list[list[int]]:
         total_area = self.grid_size * self.grid_size
 
-        # TODO: Limit maximum rect area to be certain fraction of grid
         while True:
             n_occupied = 0
             occupied = empty_square_grid(self.grid_size)
@@ -238,6 +239,11 @@ class Game:
                                     space_below = (_y - y) - 1
                                     break
                                 _y += 1
+                            # TODO: This only limits height, resulting in a tendency for wide rectangles, since width is unlimited
+                            # Find a way to limit height just as much as width
+                            max_height = int(self.grid_area * RECT_MAX_GRID_PERC) // (abs(B_x - A[0]) + 1)
+                            space_above = min(space_above, max_height)
+                            space_below = min(space_below, max_height)
                             B_y = A[1] - space_above + randrange(space_above + space_below + 1)
                             B = [B_x, B_y]
                             # Habemus rectiangulum!
@@ -559,6 +565,7 @@ def main():
                         game.delete_intersecting(start_cell)
                     else:
                         # Place input rect onto grid
+                        # TODO: Solve this without an `assert`
                         assert input_rect
                         game.add_rect(input_rect)
                         if game.verify():
