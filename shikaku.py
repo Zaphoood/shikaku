@@ -191,6 +191,11 @@ class Game:
         self.numbers = self.generate_numbers()
         self.number_renderer = NumberRenderer(FONT, FONT_SIZE, GRID_COLOR)
 
+        # Input stuff
+        self.input_rect: Optional[Rect] = None
+        self.start_cell: Optional[Point] = None
+        self.mouse_cell: Optional[Point] = None
+
     def generate_numbers(self) -> list[list[int]]:
         total_area = self.grid_size * self.grid_size
 
@@ -297,6 +302,53 @@ class Game:
             numbers[rect.top_left.y + randrange(rect.height)][rect.top_left.x + randrange(rect.width)] = rect.area
         return numbers
 
+    def update(self, events: list[pygame.event.Event]) -> tuple[bool, bool]:
+        """Handle user input and update game.
+
+        Returns flags stop and reset. If stop is True, the window should be closed. If reset is True,
+        the game object should be destroyed and replaced by a new instance."""
+        stop = False
+        reset = False
+        for event in events:
+            if event.type == pygame.QUIT:
+                stop = True
+                break
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    stop = True
+                    break
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1: # Left click
+                    self.start_cell = Point(pos_to_cell(event.pos, GRID_DRAWING_POS))
+                elif event.button == 3: # Right click
+                    self.input_rect = None
+                    self.start_cell = None
+            elif event.type == pygame.MOUSEBUTTONUP:
+                if event.button == 1: # Left click
+                    if not self.start_cell or not self.mouse_cell:
+                        # This happens if RMB is released before LMB is released
+                        continue
+                    if self.start_cell == self.mouse_cell:
+                        # If the cursor wasn't moved, delete rect under cursor
+                        assert self.start_cell
+                        self.delete_intersecting(self.start_cell)
+                    else:
+                        # Place input rect onto grid
+                        if not self.input_rect:
+                            print("ERROR: Couldn't create rect")
+                            continue
+                        self.new_rect(self.input_rect)
+                        if self.verify():
+                            reset = True
+                    self.input_rect = None
+                    self.start_cell = None
+
+        if self.start_cell:
+            self.mouse_cell = Point(pos_to_cell(pygame.mouse.get_pos(), GRID_DRAWING_POS))
+            self.input_rect = Rect(self.start_cell, self.mouse_cell)
+
+        return (not stop), reset
+
     def draw(self, screen: pygame.surface.Surface, pos=[0, 0]) -> None:
         # Draw grid
         for x in range(1, self.grid_size * GRID_SUBSECTIONS):
@@ -330,8 +382,11 @@ class Game:
                     offset = [int((CELL_SIZE - rendered.get_size()[0]) / 2),
                         int((CELL_SIZE - rendered.get_size()[1]) / 2)]
                     screen.blit(rendered, [pos[0] + x * CELL_SIZE + offset[0], pos[1] + y * CELL_SIZE + offset[1]])
+        # Draw input rect
+        if self.input_rect:
+            self.input_rect.draw_floating(screen, GRID_DRAWING_POS)
 
-    def add_rect(self, new: Rect) -> None:
+    def new_rect(self, new: Rect) -> None:
         # Check if rect contained in grid
         if not (0 <= new.top_left.x < self.grid_size and \
             0 <= new.bottom_right.x < self.grid_size and \
@@ -341,12 +396,7 @@ class Game:
         # Remove existing rects that intersect with the new one
         intersecting = [i for i, rect in enumerate(self.rects) if rect.intersects(new)]
         self.delete_rects_by_indices(intersecting)
-        self.rects.append(new)
-        self.rect_area += new.area
-        # Set cells as covered
-        for y in range(new.top_left.y, new.bottom_right.y + 1):
-            for x in range(new.top_left.x, new.bottom_right.x + 1):
-                self.covered[y][x] = 1
+        self._append_rect(new)
 
         # Add implicitly created rects (rectangle-shaped, uncovered areas enclosed by
         # other rectangles that contain exactly one number)
@@ -508,8 +558,16 @@ class Game:
                 (lower_bound - upper_bound - 1 + new.top_left.x - left_bound - 1) > 2:
                 implicit_rects.append(Rect(Point(left_bound + 1, upper_bound + 1), Point(new.top_left.x - 1, lower_bound - 1)))
 
-        self.rects.extend(implicit_rects)
-        self.rect_area += sum(rect.area for rect in implicit_rects)
+        for rect in implicit_rects:
+            self._append_rect(rect)
+
+    def _append_rect(self, rect: Rect):
+        self.rects.append(rect)
+        self.rect_area += rect.area
+        # Set cells as covered
+        for y in range(rect.top_left.y, rect.bottom_right.y + 1):
+            for x in range(rect.top_left.x, rect.bottom_right.x + 1):
+                self.covered[y][x] = 1
 
     def delete_intersecting(self, point: Point) -> None:
         """Delete all rects that contain a given Point"""
@@ -542,56 +600,16 @@ def main():
         game.total_size + GRID_DRAWING_POS[1] * 2])
     pygame.display.set_caption(CAPTION)
 
-    input_rect: Optional[Rect] = None
-    start_cell: Optional[Point] = None
-    mouse_cell: Optional[Point] = None
-
-    running = True
     clock = pygame.time.Clock()
+    running = True
+    reset = False
     while running:
         clock.tick(FRAMERATE)
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-                break
-            elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    running = False
-                    break
-            elif event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 1: # Left click
-                    start_cell = Point(pos_to_cell(event.pos, GRID_DRAWING_POS))
-                elif event.button == 3: # Right click
-                    input_rect = None
-                    start_cell = None
-            elif event.type == pygame.MOUSEBUTTONUP:
-                if event.button == 1: # Left click
-                    if not start_cell or not mouse_cell:
-                        # This happens if RMB is released before LMB is released
-                        continue
-                    if start_cell == mouse_cell:
-                        # If the cursor wasn't moved, delete rect under cursor
-                        assert start_cell
-                        game.delete_intersecting(start_cell)
-                    else:
-                        # Place input rect onto grid
-                        if not input_rect:
-                            print("ERROR: Couldn't create rect")
-                            continue
-                        game.add_rect(input_rect)
-                        if game.verify():
-                            game = Game(GRID_SIZE)
-                    input_rect = None
-                    start_cell = None
-
-        if start_cell:
-            mouse_cell = Point(pos_to_cell(pygame.mouse.get_pos(), GRID_DRAWING_POS))
-            input_rect = Rect(start_cell, mouse_cell)
-
+        running, reset = game.update(pygame.event.get())
+        if reset:
+            game = Game(GRID_SIZE)
         screen.fill(BACKGROUND_COLOR)
         game.draw(screen, GRID_DRAWING_POS)
-        if input_rect:
-            input_rect.draw_floating(screen, GRID_DRAWING_POS)
         pygame.display.flip() 
 
 if __name__ == "__main__":
