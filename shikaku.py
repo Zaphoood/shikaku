@@ -4,12 +4,18 @@ from __future__ import annotations
 import os
 
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
+from enum import Enum, auto
 from random import randrange
 from typing import Optional
 
 import pygame
 from screeninfo import get_monitors
 
+
+class InputMethod(Enum):
+    NONE = auto()
+    MOUSE = auto()
+    KEYBOARD = auto()
 
 def calc_cell_size(grid_size, cell_base_size) -> int:
     monitor = get_monitors()[0]
@@ -194,7 +200,10 @@ class Game:
         # Input stuff
         self.input_rect: Optional[Rect] = None
         self.start_cell: Optional[Point] = None
-        self.mouse_cell: Optional[Point] = None
+        self.cursor_cell: Optional[Point] = None
+        self.start_cell_set = False
+
+        self.input_method = InputMethod.NONE
 
     def generate_numbers(self) -> list[list[int]]:
         total_area = self.grid_size * self.grid_size
@@ -302,6 +311,28 @@ class Game:
             numbers[rect.top_left.y + randrange(rect.height)][rect.top_left.x + randrange(rect.width)] = rect.area
         return numbers
 
+    def _move_start_cell(self, delta_x, delta_y) -> None:
+        if not self.start_cell:
+            self.start_cell = Point(GRID_SIZE // 2, GRID_SIZE // 2)
+        self.start_cell.x = max(0, min(GRID_SIZE - 1, self.start_cell.x + delta_x))
+        self.start_cell.y = max(0, min(GRID_SIZE - 1, self.start_cell.y + delta_y))
+        if not self.start_cell_set:
+            self._reset_cursor_cell()
+
+    def _move_cursor_cell(self, delta_x, delta_y) -> None:
+        if not self.cursor_cell:
+            if not self.start_cell:
+                print("ERROR: Cannot set cursor_cell before start_cell is set")
+                return None
+            self._reset_cursor_cell()
+        self.cursor_cell.x = max(0, min(GRID_SIZE - 1, self.cursor_cell.x + delta_x)) # type: ignore
+        self.cursor_cell.y = max(0, min(GRID_SIZE - 1, self.cursor_cell.y + delta_y)) # type: ignore
+
+    def _reset_cursor_cell(self) -> None:
+        if self.start_cell:
+            self.cursor_cell = Point(self.start_cell.x, self.start_cell.y)
+        self.start_cell_set = False
+
     def update(self, events: list[pygame.event.Event]) -> tuple[bool, bool]:
         """Handle user input and update game.
 
@@ -315,37 +346,83 @@ class Game:
                 break
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    stop = True
-                    break
+                    self._reset_cursor_cell()
+                elif event.key == pygame.K_UP:
+                    self.input_method = InputMethod.KEYBOARD
+                    if self.start_cell_set:
+                        self._move_cursor_cell(0, -1)
+                    else:
+                        self._move_start_cell(0, -1)
+                elif event.key == pygame.K_DOWN:
+                    self.input_method = InputMethod.KEYBOARD
+                    if self.start_cell_set:
+                        self._move_cursor_cell(0, 1)
+                    else:
+                        self._move_start_cell(0, 1)
+                elif event.key == pygame.K_RIGHT:
+                    self.input_method = InputMethod.KEYBOARD
+                    if self.start_cell_set:
+                        self._move_cursor_cell(1, 0)
+                    else:
+                        self._move_start_cell(1, 0)
+                elif event.key == pygame.K_LEFT:
+                    self.input_method = InputMethod.KEYBOARD
+                    if self.start_cell_set:
+                        self._move_cursor_cell(-1, 0)
+                    else:
+                        self._move_start_cell(-1, 0)
+                elif event.key == pygame.K_SPACE:
+                    if self.start_cell_set:
+                        if not self.input_rect or not self.start_cell or not self.cursor_cell:
+                            print("ERROR: Couldn't create rect")
+                            continue
+                        reset = self.new_rect(self.input_rect)
+                        self.start_cell.x = self.cursor_cell.x
+                        self.start_cell.y = self.cursor_cell.y
+                        self.start_cell_set = False
+                    elif self.start_cell:
+                        # TODO: Change color of input rect if start cell is set
+                        self.start_cell_set = True
+                elif event.key == pygame.K_d:
+                    if self.start_cell:
+                        if self.input_rect:
+                            self.delete_intersecting_rect(self.input_rect)
+                            self._reset_cursor_cell()
+                        else:
+                            self.delete_intersecting_point(self.start_cell)
             elif event.type == pygame.MOUSEBUTTONDOWN:
+                self.input_method = InputMethod.MOUSE
                 if event.button == 1: # Left click
                     self.start_cell = Point(pos_to_cell(event.pos, GRID_DRAWING_POS))
                 elif event.button == 3: # Right click
                     self.input_rect = None
                     self.start_cell = None
             elif event.type == pygame.MOUSEBUTTONUP:
+                self.input_method = InputMethod.MOUSE
                 if event.button == 1: # Left click
-                    if not self.start_cell or not self.mouse_cell:
+                    if not self.start_cell or not self.cursor_cell:
                         # This happens if RMB is released before LMB is released
                         continue
-                    if self.start_cell == self.mouse_cell:
+                    if self.start_cell == self.cursor_cell:
                         # If the cursor wasn't moved, delete rect under cursor
                         assert self.start_cell
-                        self.delete_intersecting(self.start_cell)
+                        self.delete_intersecting_point(self.start_cell)
                     else:
                         # Place input rect onto grid
                         if not self.input_rect:
                             print("ERROR: Couldn't create rect")
                             continue
-                        self.new_rect(self.input_rect)
-                        if self.verify():
-                            reset = True
+                        reset = self.new_rect(self.input_rect)
                     self.input_rect = None
                     self.start_cell = None
 
-        if self.start_cell:
-            self.mouse_cell = Point(pos_to_cell(pygame.mouse.get_pos(), GRID_DRAWING_POS))
-            self.input_rect = Rect(self.start_cell, self.mouse_cell)
+        if self.input_method == InputMethod.MOUSE:
+            if self.start_cell:
+                self.cursor_cell = Point(pos_to_cell(pygame.mouse.get_pos(), GRID_DRAWING_POS))
+                self.input_rect = Rect(self.start_cell, self.cursor_cell)
+        elif self.input_method == InputMethod.KEYBOARD:
+            if self.start_cell and self.cursor_cell:
+                self.input_rect = Rect(self.start_cell, self.cursor_cell)
 
         return (not stop), reset
 
@@ -386,21 +463,20 @@ class Game:
         if self.input_rect:
             self.input_rect.draw_floating(screen, GRID_DRAWING_POS)
 
-    def new_rect(self, new: Rect) -> None:
+    def new_rect(self, new: Rect) -> bool:
         # Check if rect contained in grid
         if not (0 <= new.top_left.x < self.grid_size and \
             0 <= new.bottom_right.x < self.grid_size and \
             0 <= new.top_left.y < self.grid_size and \
             0 <= new.bottom_right.y < self.grid_size):
-            return
-        # Remove existing rects that intersect with the new one
-        intersecting = [i for i, rect in enumerate(self.rects) if rect.intersects(new)]
-        self.delete_rects_by_indices(intersecting)
+            return False
+
+        self.delete_intersecting_rect(new)
         self._append_rect(new)
+
 
         # Add implicitly created rects (rectangle-shaped, uncovered areas enclosed by
         # other rectangles that contain exactly one number)
-
         # Find uncovered cells that are horiz. or vert. adjacent to just created rectangle
         def is_covered(x: int, y: int) -> bool:
             if not (0 <= x < self.grid_size and 0 <= y < self.grid_size):
@@ -561,6 +637,8 @@ class Game:
         for rect in implicit_rects:
             self._append_rect(rect)
 
+        return self.verify()
+
     def _append_rect(self, rect: Rect):
         self.rects.append(rect)
         self.rect_area += rect.area
@@ -569,9 +647,14 @@ class Game:
             for x in range(rect.top_left.x, rect.bottom_right.x + 1):
                 self.covered[y][x] = 1
 
-    def delete_intersecting(self, point: Point) -> None:
-        """Delete all rects that contain a given Point"""
+    def delete_intersecting_point(self, point: Point) -> None:
+        """Delete all existing rects that contain a given Point"""
         self.delete_rects_by_indices([i for i, rect in enumerate(self.rects) if rect.contains_point(point)])
+
+    def delete_intersecting_rect(self, other: Rect) -> None:
+        """Remove existing rects that intersect with a given rect"""
+        intersecting = [i for i, rect in enumerate(self.rects) if rect.intersects(other)]
+        self.delete_rects_by_indices(intersecting)
 
     def delete_rects_by_indices(self, indices: list[int]) -> None:
         deleted = [self.rects[i] for i in indices]
