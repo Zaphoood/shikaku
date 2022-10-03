@@ -457,6 +457,8 @@ class Game:
                         if not self.input_rect or not self.start_cell or not self.cursor_cell:
                             print("ERROR: Couldn't create rect")
                             continue
+                        if self.start_cell == self.cursor_cell:
+                            continue
                         reset = self.new_rect(self.input_rect)
                         self.start_cell.x = self.cursor_cell.x
                         self.start_cell.y = self.cursor_cell.y
