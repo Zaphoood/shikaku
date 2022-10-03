@@ -311,27 +311,45 @@ class Game:
             numbers[rect.top_left.y + randrange(rect.height)][rect.top_left.x + randrange(rect.width)] = rect.area
         return numbers
 
-    def _move_start_cell(self, delta_x, delta_y) -> None:
+    def _move_start_cell(self, dir_x, dir_y, until_number=False) -> None:
         if not self.start_cell:
             self.start_cell = Point(GRID_SIZE // 2, GRID_SIZE // 2)
-        self.start_cell.x = max(0, min(GRID_SIZE - 1, self.start_cell.x + delta_x))
-        self.start_cell.y = max(0, min(GRID_SIZE - 1, self.start_cell.y + delta_y))
+        if until_number:
+            self.start_cell = self._next_number(self.start_cell, dir_x, dir_y)
+        else:
+            self.start_cell.x = max(0, min(GRID_SIZE - 1, self.start_cell.x + dir_x))
+            self.start_cell.y = max(0, min(GRID_SIZE - 1, self.start_cell.y + dir_y))
         if not self.start_cell_set:
             self._reset_cursor_cell()
 
-    def _move_cursor_cell(self, delta_x, delta_y) -> None:
+    def _move_cursor_cell(self, dir_x, dir_y) -> None:
         if not self.cursor_cell:
             if not self.start_cell:
                 print("ERROR: Cannot set cursor_cell before start_cell is set")
                 return None
             self._reset_cursor_cell()
-        self.cursor_cell.x = max(0, min(GRID_SIZE - 1, self.cursor_cell.x + delta_x)) # type: ignore
-        self.cursor_cell.y = max(0, min(GRID_SIZE - 1, self.cursor_cell.y + delta_y)) # type: ignore
+        self.cursor_cell.x = max(0, min(GRID_SIZE - 1, self.cursor_cell.x + dir_x)) # type: ignore
+        self.cursor_cell.y = max(0, min(GRID_SIZE - 1, self.cursor_cell.y + dir_y)) # type: ignore
 
     def _reset_cursor_cell(self) -> None:
         if self.start_cell:
             self.cursor_cell = Point(self.start_cell.x, self.start_cell.y)
         self.start_cell_set = False
+
+    def _next_number(self, start: Point, dir_x: int, dir_y: int) -> Point:
+        if dir_x and dir_y:
+            raise Exception("Can't move diagonally")
+        step = Point(start.x, start.y)
+        while True:
+            if (dir_x > 0 and step.x == self.grid_size - 1) \
+                or (dir_x < 0 and step.x == 0) \
+                or (dir_y > 0 and step.y == self.grid_size - 1) \
+                or (dir_y < 0 and step.y == 0):
+                return step
+            step.x += dir_x
+            step.y += dir_y
+            if self.numbers[step.y][step.x]:
+                return step
 
     def update(self, events: list[pygame.event.Event]) -> tuple[bool, bool]:
         """Handle user input and update game.
@@ -345,6 +363,7 @@ class Game:
                 stop = True
                 break
             elif event.type == pygame.KEYDOWN:
+                ctrl_down = bool(pygame.key.get_mods() & pygame.KMOD_CTRL)
                 if event.key == pygame.K_ESCAPE:
                     self._reset_cursor_cell()
                 elif event.key == pygame.K_UP:
@@ -352,25 +371,25 @@ class Game:
                     if self.start_cell_set:
                         self._move_cursor_cell(0, -1)
                     else:
-                        self._move_start_cell(0, -1)
+                        self._move_start_cell(0, -1, until_number=ctrl_down)
                 elif event.key == pygame.K_DOWN:
                     self.input_method = InputMethod.KEYBOARD
                     if self.start_cell_set:
                         self._move_cursor_cell(0, 1)
                     else:
-                        self._move_start_cell(0, 1)
+                        self._move_start_cell(0, 1, until_number=ctrl_down)
                 elif event.key == pygame.K_RIGHT:
                     self.input_method = InputMethod.KEYBOARD
                     if self.start_cell_set:
                         self._move_cursor_cell(1, 0)
                     else:
-                        self._move_start_cell(1, 0)
+                        self._move_start_cell(1, 0, until_number=ctrl_down)
                 elif event.key == pygame.K_LEFT:
                     self.input_method = InputMethod.KEYBOARD
                     if self.start_cell_set:
                         self._move_cursor_cell(-1, 0)
                     else:
-                        self._move_start_cell(-1, 0)
+                        self._move_start_cell(-1, 0, until_number=ctrl_down)
                 elif event.key == pygame.K_SPACE:
                     if self.start_cell_set:
                         if not self.input_rect or not self.start_cell or not self.cursor_cell:
