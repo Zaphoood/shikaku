@@ -351,6 +351,48 @@ class Game:
             if self.numbers[step.y][step.x]:
                 return step
 
+    def _autofill(self, start: Point, cursor: Point, dir_x: int, dir_y: int) -> tuple[bool, Point]:
+        """Move the cursor in a given direction, trying to create a rect with an area equal
+        to the number it contains.
+
+        Returns:
+          bool: Wether autofilling was successfull
+          Point: Final position of the cursor
+        """
+        if not dir_x:
+            breadth = abs(start.x - cursor.x) + 1
+            # Shitty variable name, I know. Basically this tells us wich way to iterate
+            step = 1 if cursor.x >= start.x else -1
+        elif not dir_y:
+            breadth = abs(start.y - cursor.y) + 1
+            step = 1 if cursor.y >= start.y else -1
+        else:
+            raise Exception("Can't move diagonally")
+        assert abs(dir_x) + abs(dir_y) == 1
+
+        number = 0
+        length = 1
+        while True:
+            if not 0 <= start.x + (length - 1) * dir_x < self.grid_size \
+                or not 0 <= start.y + (length - 1) * dir_y < self.grid_size:
+                return False, Point(-1, -1)
+            for i in range(0, breadth * step, step):
+                if (n := self.numbers[start.y + dir_y * (length - 1) + (1 - abs(dir_y)) * i][start.x + dir_x * (length - 1) + (1 - abs(dir_x)) * i]):
+                    if number:
+                        return False, Point(-1, -1)
+                    else:
+                        number = n
+            if number:
+                area = breadth * length
+                if area == number:
+                    return True, Point(
+                            start.x + dir_x * (length - 1) + (1 - abs(dir_x)) * (breadth - 1) * step,
+                            start.y + dir_y * (length - 1) + (1 - abs(dir_y)) * (breadth - 1) * step)
+                elif area > number:
+                    return False, Point(-1, -1)
+
+            length += 1
+
     def update(self, events: list[pygame.event.Event]) -> tuple[bool, bool]:
         """Handle user input and update game.
 
@@ -369,25 +411,45 @@ class Game:
                 elif event.key == pygame.K_UP:
                     self.input_method = InputMethod.KEYBOARD
                     if self.start_cell_set:
-                        self._move_cursor_cell(0, -1)
+                        if ctrl_down and self.start_cell and self.cursor_cell:
+                            success, cursor = self._autofill(self.start_cell, self.cursor_cell, 0, -1)
+                            if success:
+                                self.cursor_cell = cursor
+                        else:
+                            self._move_cursor_cell(0, -1)
                     else:
                         self._move_start_cell(0, -1, until_number=ctrl_down)
                 elif event.key == pygame.K_DOWN:
                     self.input_method = InputMethod.KEYBOARD
                     if self.start_cell_set:
-                        self._move_cursor_cell(0, 1)
+                        if ctrl_down and self.start_cell and self.cursor_cell:
+                            success, cursor = self._autofill(self.start_cell, self.cursor_cell, 0, 1)
+                            if success:
+                                self.cursor_cell = cursor
+                        else:
+                            self._move_cursor_cell(0, 1)
                     else:
                         self._move_start_cell(0, 1, until_number=ctrl_down)
                 elif event.key == pygame.K_RIGHT:
                     self.input_method = InputMethod.KEYBOARD
                     if self.start_cell_set:
-                        self._move_cursor_cell(1, 0)
+                        if ctrl_down and self.start_cell and self.cursor_cell:
+                            success, cursor = self._autofill(self.start_cell, self.cursor_cell, 1, 0)
+                            if success:
+                                self.cursor_cell = cursor
+                        else:
+                            self._move_cursor_cell(1, 0)
                     else:
                         self._move_start_cell(1, 0, until_number=ctrl_down)
                 elif event.key == pygame.K_LEFT:
                     self.input_method = InputMethod.KEYBOARD
                     if self.start_cell_set:
-                        self._move_cursor_cell(-1, 0)
+                        if ctrl_down and self.start_cell and self.cursor_cell:
+                            success, cursor = self._autofill(self.start_cell, self.cursor_cell, -1, 0)
+                            if success:
+                                self.cursor_cell = cursor
+                        else:
+                            self._move_cursor_cell(-1, 0)
                     else:
                         self._move_start_cell(-1, 0, until_number=ctrl_down)
                 elif event.key == pygame.K_SPACE:
