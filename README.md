@@ -15,7 +15,16 @@ python -m pip install pygame
 
 ## Usage
 
-To start the game, run `python shikaku.py`. Have fun!
+To start the game, run `python shikaku.py`.
+
+Create new rectangles by clicking and dragging the mouse, delete rectangles simply by clicking them.
+
+Alternatively, use the arrow keys to navigate: Press <kbd>Space</kbd> to start creating
+a rectangle, resize using the arrow keys and press <kbd>Space</kbd> again to confirm.
+To delete a rectangle under the cursor, press <kbd>D</kbd>.
+While resizing, use <kbd>Ctrl+&lt;Arrow Key&gt;</kbd> to auto-fill.
+
+Have fun!
 
 ## Example
 
