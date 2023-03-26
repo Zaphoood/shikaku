@@ -20,7 +20,7 @@ class InputMethod(Enum):
 
 def calc_cell_size(grid_size, cell_base_size) -> int:
     monitor = get_monitors()[0]
-    screen_scale = 10
+    screen_scale = 10.0
     if monitor.width_mm:
         screen_scale = monitor.width / monitor.width_mm
     cell_size = cell_base_size * screen_scale
@@ -71,7 +71,9 @@ class Point:
         else:
             raise TypeError("Point takes either iterable or two integers")
 
-    def __eq__(self, other: Point) -> bool:
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Point):
+            return False
         return self.x == other.x and self.y == other.y
 
     def __repr__(self) -> str:
@@ -245,7 +247,7 @@ class NumberRenderer:
 
 
 class Game:
-    def __init__(self, grid_size):
+    def __init__(self, grid_size) -> None:
         self.grid_size = grid_size
         self.grid_area = grid_size * grid_size
         self.total_size = grid_size * CELL_SIZE
