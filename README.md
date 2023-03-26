@@ -15,7 +15,7 @@ python -m pip install pygame
 
 ## Usage
 
-To start the game, simply run `./shikaku.py`. Have fun!
+To start the game, run `python shikaku.py`. Have fun!
 
 ## Example
 
