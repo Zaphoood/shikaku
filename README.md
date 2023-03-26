@@ -1,6 +1,6 @@
 # Shikaku
 
-A fun and challenging puzzle game. My implementation was inspired by [this](https://www.puzzle-shikaku.com/) website.
+A fun and challenging [japanese puzzle game](https://en.wikipedia.org/wiki/Shikaku). My implementation was inspired by [this](https://www.puzzle-shikaku.com/) website.
 
 ## Rules
 
