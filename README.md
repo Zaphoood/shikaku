@@ -6,9 +6,9 @@ A fun and challenging puzzle game. My implementation was inspired by [this](http
 
 You have to divide the grid into rectangular pieces such that each piece contains exactly one number, and that number is equal the area of the rectangle. ([Source](https://www.puzzle-shikaku.com/))
 
-## Installation
+## Setup
 
-You will need Python >= 3.10 and the `pygame` library. To install `pygame`, run
+You will need Python 3.10, as well as the pygame library. To install pygame, run
 ```
 python -m pip install pygame
 ```
