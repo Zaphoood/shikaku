@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import os
 
-os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
+os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "hide"
 from enum import Enum, auto
 from random import randrange
 from typing import Optional
@@ -16,6 +16,7 @@ class InputMethod(Enum):
     NONE = auto()
     MOUSE = auto()
     KEYBOARD = auto()
+
 
 def calc_cell_size(grid_size, cell_base_size) -> int:
     monitor = get_monitors()[0]
@@ -31,6 +32,7 @@ def calc_cell_size(grid_size, cell_base_size) -> int:
         cell_size = (monitor.height * WIN_MAX_SCREEN_PERC) / grid_size
 
     return round(cell_size)
+
 
 GRID_SIZE = 10
 # Maximum area of a rect compared to the total area of the grid
@@ -75,6 +77,7 @@ class Point:
     def __repr__(self) -> str:
         return f"<Point: x={self.x}, y={self.y}>"
 
+
 class Rect:
     def __init__(self, a: Point, b: Point, color: tuple[int, int, int] = RECT_COLOR):
         self.init(a, b)
@@ -90,53 +93,101 @@ class Rect:
         self.top_left = Point(left, top)
         self.bottom_right = Point(right, bottom)
 
-        self.width = (self.bottom_right.x - self.top_left.x + 1)
-        self.height = (self.bottom_right.y - self.top_left.y + 1)
+        self.width = self.bottom_right.x - self.top_left.x + 1
+        self.height = self.bottom_right.y - self.top_left.y + 1
         self.area = self.width * self.height
 
     def intersects(self, other: Rect) -> bool:
-        return (self.top_left.x <= other.bottom_right.x and self.bottom_right.x >= other.top_left.x) \
-                and (self.top_left.y <= other.bottom_right.y and self.bottom_right.y >= other.top_left.y)
+        return (
+            self.top_left.x <= other.bottom_right.x
+            and self.bottom_right.x >= other.top_left.x
+        ) and (
+            self.top_left.y <= other.bottom_right.y
+            and self.bottom_right.y >= other.top_left.y
+        )
 
     def contains_point(self, other: Point) -> bool:
-        return (self.top_left.x <= other.x <= self.bottom_right.x) \
-            and (self.top_left.y <= other.y <= self.bottom_right.y)
+        return (self.top_left.x <= other.x <= self.bottom_right.x) and (
+            self.top_left.y <= other.y <= self.bottom_right.y
+        )
 
     def draw(self, screen, offset=[0, 0]) -> None:
-        pygame.draw.rect(screen, self.color,
-            [offset[0] + self.top_left.x * CELL_SIZE - RECT_THICKNESS // 2,
-             offset[1] + self.top_left.y * CELL_SIZE - RECT_THICKNESS // 2,
-             self.width * CELL_SIZE + RECT_THICKNESS,
-             self.height * CELL_SIZE + RECT_THICKNESS], RECT_THICKNESS)
+        pygame.draw.rect(
+            screen,
+            self.color,
+            [
+                offset[0] + self.top_left.x * CELL_SIZE - RECT_THICKNESS // 2,
+                offset[1] + self.top_left.y * CELL_SIZE - RECT_THICKNESS // 2,
+                self.width * CELL_SIZE + RECT_THICKNESS,
+                self.height * CELL_SIZE + RECT_THICKNESS,
+            ],
+            RECT_THICKNESS,
+        )
 
     def draw_floating(self, screen, offset=[0, 0]) -> None:
         """Draw rect using dashed lines"""
-        for x in range(self.top_left.x * CELL_SIZE, (self.bottom_right.x + 1) * CELL_SIZE, DASHED_LINE_INTERVAL):
-            pygame.draw.line(screen, RECT_COLOR_FLOATING,
-                [offset[0] + x,
-                    offset[1] + self.top_left.y * CELL_SIZE],
-                [min(offset[0] + x + DASHED_LINE_LENGTH, (self.bottom_right.x + 1) * CELL_SIZE),
-                    offset[1] + self.top_left.y * CELL_SIZE],
-                width = DASHED_LINE_THICKNESS)
-            pygame.draw.line(screen, RECT_COLOR_FLOATING,
-                [offset[0] + x,
-                    offset[1] + (self.bottom_right.y + 1) * CELL_SIZE],
-                [min(offset[0] + x + DASHED_LINE_LENGTH, (self.bottom_right.x + 1) * CELL_SIZE),
-                    offset[1] + (self.bottom_right.y + 1) * CELL_SIZE],
-                width = DASHED_LINE_THICKNESS)
-        for y in range(self.top_left.y * CELL_SIZE, (self.bottom_right.y + 1) * CELL_SIZE, DASHED_LINE_INTERVAL):
-            pygame.draw.line(screen, RECT_COLOR_FLOATING,
-                [offset[0] + self.top_left.x * CELL_SIZE,
-                    offset[1] + y],
-                [offset[0] + self.top_left.x * CELL_SIZE,
-                    min(offset[1] + y + DASHED_LINE_LENGTH, (self.bottom_right.y + 1) * CELL_SIZE)],
-                width = DASHED_LINE_THICKNESS)
-            pygame.draw.line(screen, RECT_COLOR_FLOATING,
-                [offset[0] + (self.bottom_right.x + 1) * CELL_SIZE,
-                    offset[1] + y],
-                [offset[0] + (self.bottom_right.x + 1) * CELL_SIZE,
-                    min(offset[1] + y + DASHED_LINE_LENGTH, (self.bottom_right.y + 1) * CELL_SIZE)],
-                width = DASHED_LINE_THICKNESS)
+        for x in range(
+            self.top_left.x * CELL_SIZE,
+            (self.bottom_right.x + 1) * CELL_SIZE,
+            DASHED_LINE_INTERVAL,
+        ):
+            pygame.draw.line(
+                screen,
+                RECT_COLOR_FLOATING,
+                [offset[0] + x, offset[1] + self.top_left.y * CELL_SIZE],
+                [
+                    min(
+                        offset[0] + x + DASHED_LINE_LENGTH,
+                        (self.bottom_right.x + 1) * CELL_SIZE,
+                    ),
+                    offset[1] + self.top_left.y * CELL_SIZE,
+                ],
+                width=DASHED_LINE_THICKNESS,
+            )
+            pygame.draw.line(
+                screen,
+                RECT_COLOR_FLOATING,
+                [offset[0] + x, offset[1] + (self.bottom_right.y + 1) * CELL_SIZE],
+                [
+                    min(
+                        offset[0] + x + DASHED_LINE_LENGTH,
+                        (self.bottom_right.x + 1) * CELL_SIZE,
+                    ),
+                    offset[1] + (self.bottom_right.y + 1) * CELL_SIZE,
+                ],
+                width=DASHED_LINE_THICKNESS,
+            )
+        for y in range(
+            self.top_left.y * CELL_SIZE,
+            (self.bottom_right.y + 1) * CELL_SIZE,
+            DASHED_LINE_INTERVAL,
+        ):
+            pygame.draw.line(
+                screen,
+                RECT_COLOR_FLOATING,
+                [offset[0] + self.top_left.x * CELL_SIZE, offset[1] + y],
+                [
+                    offset[0] + self.top_left.x * CELL_SIZE,
+                    min(
+                        offset[1] + y + DASHED_LINE_LENGTH,
+                        (self.bottom_right.y + 1) * CELL_SIZE,
+                    ),
+                ],
+                width=DASHED_LINE_THICKNESS,
+            )
+            pygame.draw.line(
+                screen,
+                RECT_COLOR_FLOATING,
+                [offset[0] + (self.bottom_right.x + 1) * CELL_SIZE, offset[1] + y],
+                [
+                    offset[0] + (self.bottom_right.x + 1) * CELL_SIZE,
+                    min(
+                        offset[1] + y + DASHED_LINE_LENGTH,
+                        (self.bottom_right.y + 1) * CELL_SIZE,
+                    ),
+                ],
+                width=DASHED_LINE_THICKNESS,
+            )
 
     def is_valid(self) -> Optional[bool]:
         """Returns validity if it has been checked, otherwise None."""
@@ -159,8 +210,15 @@ class Rect:
         self._valid = True
         return True
 
+
 class NumberRenderer:
-    def __init__(self, font_name: str, font_size: int, color: tuple[int, int, int], font_path: Optional[str] = None):
+    def __init__(
+        self,
+        font_name: str,
+        font_size: int,
+        color: tuple[int, int, int],
+        font_path: Optional[str] = None,
+    ):
         if font_path:
             self.name = ""
             self.font_obj = pygame.font.Font(font_path, font_size)
@@ -184,6 +242,7 @@ class NumberRenderer:
 
     def _render(self, number: int) -> pygame.surface.Surface:
         return self.font_obj.render(str(number), True, self.color)
+
 
 class Game:
     def __init__(self, grid_size):
@@ -241,32 +300,58 @@ class Game:
                                     break
                                 _x += 1
                             # Choose x-coordinate of B
-                            B_x = A[0] - space_left + randrange(space_left + space_right + 1)
+                            B_x = (
+                                A[0]
+                                - space_left
+                                + randrange(space_left + space_right + 1)
+                            )
                             # Determine available space above and below
                             _y = y
                             while True:
-                                if _y < 0 or any([occupied[_y][_x] for _x in range(min(A[0], B_x), max(A[0], B_x) + 1)]):
+                                if _y < 0 or any(
+                                    [
+                                        occupied[_y][_x]
+                                        for _x in range(
+                                            min(A[0], B_x), max(A[0], B_x) + 1
+                                        )
+                                    ]
+                                ):
                                     space_above = (y - _y) - 1
                                     break
                                 _y -= 1
                             _y = y
                             while True:
-                                if _y >= self.grid_size or any([occupied[_y][_x] for _x in range(min(A[0], B_x), max(A[0], B_x) + 1)]):
+                                if _y >= self.grid_size or any(
+                                    [
+                                        occupied[_y][_x]
+                                        for _x in range(
+                                            min(A[0], B_x), max(A[0], B_x) + 1
+                                        )
+                                    ]
+                                ):
                                     space_below = (_y - y) - 1
                                     break
                                 _y += 1
                             # TODO: This only limits height, resulting in a tendency for wide rectangles, since width is unlimited
                             # Find a way to limit height just as much as width
-                            max_height = int(self.grid_area * RECT_MAX_GRID_PERC) // (abs(B_x - A[0]) + 1)
+                            max_height = int(self.grid_area * RECT_MAX_GRID_PERC) // (
+                                abs(B_x - A[0]) + 1
+                            )
                             space_above = min(space_above, max_height)
                             space_below = min(space_below, max_height)
-                            B_y = A[1] - space_above + randrange(space_above + space_below + 1)
+                            B_y = (
+                                A[1]
+                                - space_above
+                                + randrange(space_above + space_below + 1)
+                            )
                             B = [B_x, B_y]
                             # Habemus rectiangulum!
                             rect = Rect(Point(A), Point(B))
                             # Mark area covered by rectangle as occupied
                             for _x in range(rect.top_left.x, rect.bottom_right.x + 1):
-                                for _y in range(rect.top_left.y, rect.bottom_right.y + 1):
+                                for _y in range(
+                                    rect.top_left.y, rect.bottom_right.y + 1
+                                ):
                                     occupied[_y][_x] = 1
                             # Add area to total number of occupied cells
                             n_occupied += rect.area
@@ -281,23 +366,38 @@ class Game:
                 if rects[i].width == rects[i].height == 1:
                     # Find adjacent rect and merge
                     for j, other in enumerate(rects):
-                        if other.height == 1 and other.top_left.y == rects[i].top_left.y:
+                        if (
+                            other.height == 1
+                            and other.top_left.y == rects[i].top_left.y
+                        ):
                             if other.top_left.x == rects[i].top_left.x + 1:
-                                rects[j] = Rect(Point(other.top_left.x - 1, other.top_left.y),
-                                    other.bottom_right)
+                                rects[j] = Rect(
+                                    Point(other.top_left.x - 1, other.top_left.y),
+                                    other.bottom_right,
+                                )
                                 break
                             elif other.bottom_right.x == rects[i].top_left.x - 1:
-                                rects[j] = Rect(other.top_left,
-                                    Point(other.bottom_right.x + 1, other.bottom_right.y))
+                                rects[j] = Rect(
+                                    other.top_left,
+                                    Point(
+                                        other.bottom_right.x + 1, other.bottom_right.y
+                                    ),
+                                )
                                 break
                         if other.width == 1 and other.top_left.x == rects[i].top_left.x:
                             if other.top_left.y == rects[i].top_left.y + 1:
-                                rects[j] = Rect(Point(other.top_left.x, other.top_left.y - 1),
-                                    other.bottom_right)
+                                rects[j] = Rect(
+                                    Point(other.top_left.x, other.top_left.y - 1),
+                                    other.bottom_right,
+                                )
                                 break
                             elif other.bottom_right.y == rects[i].bottom_right.y - 1:
-                                rects[j] = Rect(other.top_left,
-                                    Point(other.bottom_right.x, other.bottom_right.y + 1))
+                                rects[j] = Rect(
+                                    other.top_left,
+                                    Point(
+                                        other.bottom_right.x, other.bottom_right.y + 1
+                                    ),
+                                )
                                 break
                     else:
                         success = False
@@ -308,7 +408,9 @@ class Game:
                 break
 
         for rect in rects:
-            numbers[rect.top_left.y + randrange(rect.height)][rect.top_left.x + randrange(rect.width)] = rect.area
+            numbers[rect.top_left.y + randrange(rect.height)][
+                rect.top_left.x + randrange(rect.width)
+            ] = rect.area
         return numbers
 
     def _move_start_cell(self, dir_x, dir_y, until_number=False) -> None:
@@ -328,8 +430,8 @@ class Game:
                 print("ERROR: Cannot set cursor_cell before start_cell is set")
                 return None
             self._reset_cursor_cell()
-        self.cursor_cell.x = max(0, min(GRID_SIZE - 1, self.cursor_cell.x + dir_x)) # type: ignore
-        self.cursor_cell.y = max(0, min(GRID_SIZE - 1, self.cursor_cell.y + dir_y)) # type: ignore
+        self.cursor_cell.x = max(0, min(GRID_SIZE - 1, self.cursor_cell.x + dir_x))  # type: ignore
+        self.cursor_cell.y = max(0, min(GRID_SIZE - 1, self.cursor_cell.y + dir_y))  # type: ignore
 
     def _reset_cursor_cell(self) -> None:
         if self.start_cell:
@@ -341,17 +443,21 @@ class Game:
             raise Exception("Can't move diagonally")
         step = Point(start.x, start.y)
         while True:
-            if (dir_x > 0 and step.x == self.grid_size - 1) \
-                or (dir_x < 0 and step.x == 0) \
-                or (dir_y > 0 and step.y == self.grid_size - 1) \
-                or (dir_y < 0 and step.y == 0):
+            if (
+                (dir_x > 0 and step.x == self.grid_size - 1)
+                or (dir_x < 0 and step.x == 0)
+                or (dir_y > 0 and step.y == self.grid_size - 1)
+                or (dir_y < 0 and step.y == 0)
+            ):
                 return step
             step.x += dir_x
             step.y += dir_y
             if self.numbers[step.y][step.x]:
                 return step
 
-    def _autofill(self, start: Point, cursor: Point, dir_x: int, dir_y: int) -> tuple[bool, Point]:
+    def _autofill(
+        self, start: Point, cursor: Point, dir_x: int, dir_y: int
+    ) -> tuple[bool, Point]:
         """Move the cursor in a given direction, trying to create a rect with an area equal
         to the number it contains.
 
@@ -373,11 +479,15 @@ class Game:
         number = 0
         length = 1
         while True:
-            if not 0 <= start.x + (length - 1) * dir_x < self.grid_size \
-                or not 0 <= start.y + (length - 1) * dir_y < self.grid_size:
+            if (
+                not 0 <= start.x + (length - 1) * dir_x < self.grid_size
+                or not 0 <= start.y + (length - 1) * dir_y < self.grid_size
+            ):
                 return False, Point(-1, -1)
             for i in range(0, breadth * step, step):
-                if (n := self.numbers[start.y + dir_y * (length - 1) + (1 - abs(dir_y)) * i][start.x + dir_x * (length - 1) + (1 - abs(dir_x)) * i]):
+                if n := self.numbers[
+                    start.y + dir_y * (length - 1) + (1 - abs(dir_y)) * i
+                ][start.x + dir_x * (length - 1) + (1 - abs(dir_x)) * i]:
                     if number:
                         return False, Point(-1, -1)
                     else:
@@ -386,8 +496,13 @@ class Game:
                 area = breadth * length
                 if area == number:
                     return True, Point(
-                            start.x + dir_x * (length - 1) + (1 - abs(dir_x)) * (breadth - 1) * step,
-                            start.y + dir_y * (length - 1) + (1 - abs(dir_y)) * (breadth - 1) * step)
+                        start.x
+                        + dir_x * (length - 1)
+                        + (1 - abs(dir_x)) * (breadth - 1) * step,
+                        start.y
+                        + dir_y * (length - 1)
+                        + (1 - abs(dir_y)) * (breadth - 1) * step,
+                    )
                 elif area > number:
                     return False, Point(-1, -1)
 
@@ -412,7 +527,9 @@ class Game:
                     self.input_method = InputMethod.KEYBOARD
                     if self.start_cell_set:
                         if ctrl_down and self.start_cell and self.cursor_cell:
-                            success, cursor = self._autofill(self.start_cell, self.cursor_cell, 0, -1)
+                            success, cursor = self._autofill(
+                                self.start_cell, self.cursor_cell, 0, -1
+                            )
                             if success:
                                 self.cursor_cell = cursor
                         else:
@@ -423,7 +540,9 @@ class Game:
                     self.input_method = InputMethod.KEYBOARD
                     if self.start_cell_set:
                         if ctrl_down and self.start_cell and self.cursor_cell:
-                            success, cursor = self._autofill(self.start_cell, self.cursor_cell, 0, 1)
+                            success, cursor = self._autofill(
+                                self.start_cell, self.cursor_cell, 0, 1
+                            )
                             if success:
                                 self.cursor_cell = cursor
                         else:
@@ -434,7 +553,9 @@ class Game:
                     self.input_method = InputMethod.KEYBOARD
                     if self.start_cell_set:
                         if ctrl_down and self.start_cell and self.cursor_cell:
-                            success, cursor = self._autofill(self.start_cell, self.cursor_cell, 1, 0)
+                            success, cursor = self._autofill(
+                                self.start_cell, self.cursor_cell, 1, 0
+                            )
                             if success:
                                 self.cursor_cell = cursor
                         else:
@@ -445,7 +566,9 @@ class Game:
                     self.input_method = InputMethod.KEYBOARD
                     if self.start_cell_set:
                         if ctrl_down and self.start_cell and self.cursor_cell:
-                            success, cursor = self._autofill(self.start_cell, self.cursor_cell, -1, 0)
+                            success, cursor = self._autofill(
+                                self.start_cell, self.cursor_cell, -1, 0
+                            )
                             if success:
                                 self.cursor_cell = cursor
                         else:
@@ -454,7 +577,11 @@ class Game:
                         self._move_start_cell(-1, 0, until_number=ctrl_down)
                 elif event.key == pygame.K_SPACE:
                     if self.start_cell_set:
-                        if not self.input_rect or not self.start_cell or not self.cursor_cell:
+                        if (
+                            not self.input_rect
+                            or not self.start_cell
+                            or not self.cursor_cell
+                        ):
                             print("ERROR: Couldn't create rect")
                             continue
                         if self.start_cell == self.cursor_cell:
@@ -475,14 +602,14 @@ class Game:
                             self.delete_intersecting_point(self.start_cell)
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 self.input_method = InputMethod.MOUSE
-                if event.button == 1: # Left click
+                if event.button == 1:  # Left click
                     self.start_cell = Point(pos_to_cell(event.pos, GRID_DRAWING_POS))
-                elif event.button == 3: # Right click
+                elif event.button == 3:  # Right click
                     self.input_rect = None
                     self.start_cell = None
             elif event.type == pygame.MOUSEBUTTONUP:
                 self.input_method = InputMethod.MOUSE
-                if event.button == 1: # Left click
+                if event.button == 1:  # Left click
                     if not self.start_cell or not self.cursor_cell:
                         # This happens if RMB is released before LMB is released
                         continue
@@ -501,7 +628,9 @@ class Game:
 
         if self.input_method == InputMethod.MOUSE:
             if self.start_cell:
-                self.cursor_cell = Point(pos_to_cell(pygame.mouse.get_pos(), GRID_DRAWING_POS))
+                self.cursor_cell = Point(
+                    pos_to_cell(pygame.mouse.get_pos(), GRID_DRAWING_POS)
+                )
                 self.input_rect = Rect(self.start_cell, self.cursor_cell)
         elif self.input_method == InputMethod.KEYBOARD:
             if self.start_cell and self.cursor_cell:
@@ -514,15 +643,29 @@ class Game:
         for x in range(1, self.grid_size * GRID_SUBSECTIONS):
             for y in range(1, self.grid_size * GRID_SUBSECTIONS):
                 if (not x % GRID_SUBSECTIONS) and (not y % GRID_SUBSECTIONS):
-                    pygame.draw.rect(screen, GRID_COLOR,
-                        [pos[0] + (x // GRID_SUBSECTIONS) * CELL_SIZE - RECT_THICKNESS // 2,
-                         pos[0] + (y // GRID_SUBSECTIONS) * CELL_SIZE - RECT_THICKNESS // 2,
-                         RECT_THICKNESS, RECT_THICKNESS], 0)
+                    pygame.draw.rect(
+                        screen,
+                        GRID_COLOR,
+                        [
+                            pos[0]
+                            + (x // GRID_SUBSECTIONS) * CELL_SIZE
+                            - RECT_THICKNESS // 2,
+                            pos[0]
+                            + (y // GRID_SUBSECTIONS) * CELL_SIZE
+                            - RECT_THICKNESS // 2,
+                            RECT_THICKNESS,
+                            RECT_THICKNESS,
+                        ],
+                        0,
+                    )
                 elif (not x % GRID_SUBSECTIONS) or (not y % GRID_SUBSECTIONS):
                     screen.set_at(
-                        [round(pos[0] + (x / GRID_SUBSECTIONS) * CELL_SIZE),
-                         round(pos[0] + (y / GRID_SUBSECTIONS) * CELL_SIZE)],
-                        GRID_COLOR)
+                        [
+                            round(pos[0] + (x / GRID_SUBSECTIONS) * CELL_SIZE),
+                            round(pos[0] + (y / GRID_SUBSECTIONS) * CELL_SIZE),
+                        ],
+                        GRID_COLOR,
+                    )
         # List of rectangles to draw on top (i. e. after the rest of the rectangles)
         # Invalid rectangles are thereby highlighted
         on_top = []
@@ -539,24 +682,33 @@ class Game:
             for x, number in enumerate(row):
                 if number:
                     rendered = self.number_renderer.get(number)
-                    offset = [int((CELL_SIZE - rendered.get_size()[0]) / 2),
-                        int((CELL_SIZE - rendered.get_size()[1]) / 2)]
-                    screen.blit(rendered, [pos[0] + x * CELL_SIZE + offset[0], pos[1] + y * CELL_SIZE + offset[1]])
+                    offset = [
+                        int((CELL_SIZE - rendered.get_size()[0]) / 2),
+                        int((CELL_SIZE - rendered.get_size()[1]) / 2),
+                    ]
+                    screen.blit(
+                        rendered,
+                        [
+                            pos[0] + x * CELL_SIZE + offset[0],
+                            pos[1] + y * CELL_SIZE + offset[1],
+                        ],
+                    )
         # Draw input rect
         if self.input_rect:
             self.input_rect.draw_floating(screen, GRID_DRAWING_POS)
 
     def new_rect(self, new: Rect) -> bool:
         # Check if rect contained in grid
-        if not (0 <= new.top_left.x < self.grid_size and \
-            0 <= new.bottom_right.x < self.grid_size and \
-            0 <= new.top_left.y < self.grid_size and \
-            0 <= new.bottom_right.y < self.grid_size):
+        if not (
+            0 <= new.top_left.x < self.grid_size
+            and 0 <= new.bottom_right.x < self.grid_size
+            and 0 <= new.top_left.y < self.grid_size
+            and 0 <= new.bottom_right.y < self.grid_size
+        ):
             return False
 
         self.delete_intersecting_rect(new)
         self._append_rect(new)
-
 
         # Add implicitly created rects (rectangle-shaped, uncovered areas enclosed by
         # other rectangles that contain exactly one number)
@@ -565,6 +717,7 @@ class Game:
             if not (0 <= x < self.grid_size and 0 <= y < self.grid_size):
                 return True
             return bool(self.covered[y][x])
+
         above = []
         below = []
         left = []
@@ -592,31 +745,59 @@ class Game:
             while not is_covered(right_bound, cell[1]):
                 right_bound += 1
             # Assert lower bound consists of covered cells
-            if not all(is_covered(x, new.top_left.y) for x in range(left_bound + 1, right_bound)):
+            if not all(
+                is_covered(x, new.top_left.y)
+                for x in range(left_bound + 1, right_bound)
+            ):
                 continue
             lower_bound = cell[1]
             visited_numbers = 0
             failed = False
             while not failed:
                 # Check for upper bound
-                if lower_bound < cell[1] and any(is_covered(x, lower_bound) for x in range(left_bound + 1, right_bound)):
+                if lower_bound < cell[1] and any(
+                    is_covered(x, lower_bound)
+                    for x in range(left_bound + 1, right_bound)
+                ):
                     break
-                if not is_covered(left_bound, lower_bound) or not is_covered(right_bound, lower_bound):
+                if not is_covered(left_bound, lower_bound) or not is_covered(
+                    right_bound, lower_bound
+                ):
                     failed = True
                     break
-                visited_numbers += sum(bool(self.numbers[lower_bound][x]) for x in range(left_bound + 1, right_bound))
+                visited_numbers += sum(
+                    bool(self.numbers[lower_bound][x])
+                    for x in range(left_bound + 1, right_bound)
+                )
                 if visited_numbers > 1:
                     failed = True
                     break
                 # Remove visited cells
-                above = [cell for cell in above if not (left_bound < cell[0] < right_bound and cell[1] == lower_bound)]
+                above = [
+                    cell
+                    for cell in above
+                    if not (
+                        left_bound < cell[0] < right_bound and cell[1] == lower_bound
+                    )
+                ]
                 lower_bound -= 1
 
             if failed or visited_numbers != 1:
                 continue
-            if all(is_covered(x, lower_bound) for x in range(left_bound + 1, right_bound)) and \
-                (right_bound - left_bound - 1 + new.top_left.y - lower_bound - 1) > 2:
-                implicit_rects.append(Rect(Point(left_bound + 1, lower_bound + 1), Point(right_bound - 1, new.top_left.y - 1)))
+            if (
+                all(
+                    is_covered(x, lower_bound)
+                    for x in range(left_bound + 1, right_bound)
+                )
+                and (right_bound - left_bound - 1 + new.top_left.y - lower_bound - 1)
+                > 2
+            ):
+                implicit_rects.append(
+                    Rect(
+                        Point(left_bound + 1, lower_bound + 1),
+                        Point(right_bound - 1, new.top_left.y - 1),
+                    )
+                )
         while below:
             cell = below.pop()
             left_bound = right_bound = cell[0]
@@ -625,31 +806,61 @@ class Game:
             while not is_covered(right_bound, cell[1]):
                 right_bound += 1
             # Assert upper bound consists of covered cells
-            if not all(is_covered(x, new.bottom_right.y) for x in range(left_bound - 1, right_bound)):
+            if not all(
+                is_covered(x, new.bottom_right.y)
+                for x in range(left_bound - 1, right_bound)
+            ):
                 continue
             lower_bound = cell[1]
             visited_numbers = 0
             failed = False
             while not failed:
                 # Check for upper bound
-                if lower_bound > cell[1] and any(is_covered(x, lower_bound) for x in range(left_bound + 1, right_bound)):
+                if lower_bound > cell[1] and any(
+                    is_covered(x, lower_bound)
+                    for x in range(left_bound + 1, right_bound)
+                ):
                     break
-                if not is_covered(left_bound, lower_bound) or not is_covered(right_bound, lower_bound):
+                if not is_covered(left_bound, lower_bound) or not is_covered(
+                    right_bound, lower_bound
+                ):
                     failed = True
                     break
-                visited_numbers += sum(bool(self.numbers[lower_bound][x]) for x in range(left_bound + 1, right_bound))
+                visited_numbers += sum(
+                    bool(self.numbers[lower_bound][x])
+                    for x in range(left_bound + 1, right_bound)
+                )
                 if visited_numbers > 1:
                     failed = True
                     break
                 # Remove visited cells
-                below = [cell for cell in below if not (left_bound < cell[0] < right_bound and cell[1] == lower_bound)]
+                below = [
+                    cell
+                    for cell in below
+                    if not (
+                        left_bound < cell[0] < right_bound and cell[1] == lower_bound
+                    )
+                ]
                 lower_bound += 1
 
             if failed or visited_numbers != 1:
                 continue
-            if all(is_covered(x, lower_bound) for x in range(left_bound + 1, right_bound)) and \
-                (right_bound - left_bound - 1 + lower_bound - new.bottom_right.y - 1) > 2:
-                implicit_rects.append(Rect(Point(left_bound + 1, new.bottom_right.y + 1), Point(right_bound - 1, lower_bound - 1)))
+            if (
+                all(
+                    is_covered(x, lower_bound)
+                    for x in range(left_bound + 1, right_bound)
+                )
+                and (
+                    right_bound - left_bound - 1 + lower_bound - new.bottom_right.y - 1
+                )
+                > 2
+            ):
+                implicit_rects.append(
+                    Rect(
+                        Point(left_bound + 1, new.bottom_right.y + 1),
+                        Point(right_bound - 1, lower_bound - 1),
+                    )
+                )
         while right:
             cell = right.pop()
             upper_bound = lower_bound = cell[1]
@@ -658,31 +869,61 @@ class Game:
             while not is_covered(cell[0], lower_bound):
                 lower_bound += 1
             # Assert left bound consists of covered cells
-            if not all(is_covered(new.bottom_right.x, y) for y in range(upper_bound + 1, lower_bound)):
+            if not all(
+                is_covered(new.bottom_right.x, y)
+                for y in range(upper_bound + 1, lower_bound)
+            ):
                 continue
             right_bound = cell[0]
             visited_numbers = 0
             failed = False
             while not failed:
                 # Check for upper bound
-                if right_bound > cell[0] and any(is_covered(right_bound, y) for y in range(upper_bound + 1, lower_bound)):
+                if right_bound > cell[0] and any(
+                    is_covered(right_bound, y)
+                    for y in range(upper_bound + 1, lower_bound)
+                ):
                     break
-                if not is_covered(right_bound, upper_bound) or not is_covered(right_bound, lower_bound):
+                if not is_covered(right_bound, upper_bound) or not is_covered(
+                    right_bound, lower_bound
+                ):
                     failed = True
                     break
-                visited_numbers += sum(bool(self.numbers[y][right_bound]) for y in range(upper_bound + 1, lower_bound))
+                visited_numbers += sum(
+                    bool(self.numbers[y][right_bound])
+                    for y in range(upper_bound + 1, lower_bound)
+                )
                 if visited_numbers > 1:
                     failed = True
                     break
                 # Remove visited cells
-                right = [cell for cell in right if not (upper_bound < cell[1] < lower_bound and cell[0] == right_bound)]
+                right = [
+                    cell
+                    for cell in right
+                    if not (
+                        upper_bound < cell[1] < lower_bound and cell[0] == right_bound
+                    )
+                ]
                 right_bound += 1
 
             if failed or visited_numbers != 1:
                 continue
-            if all(is_covered(right_bound, y) for y in range(upper_bound + 1, lower_bound)) and \
-                (lower_bound - upper_bound - 1 + right_bound - new.bottom_right.x - 1) > 2:
-                implicit_rects.append(Rect(Point(new.bottom_right.x + 1, upper_bound + 1), Point(right_bound - 1, lower_bound - 1)))
+            if (
+                all(
+                    is_covered(right_bound, y)
+                    for y in range(upper_bound + 1, lower_bound)
+                )
+                and (
+                    lower_bound - upper_bound - 1 + right_bound - new.bottom_right.x - 1
+                )
+                > 2
+            ):
+                implicit_rects.append(
+                    Rect(
+                        Point(new.bottom_right.x + 1, upper_bound + 1),
+                        Point(right_bound - 1, lower_bound - 1),
+                    )
+                )
         while left:
             cell = left.pop()
             upper_bound = lower_bound = cell[1]
@@ -691,31 +932,59 @@ class Game:
             while not is_covered(cell[0], lower_bound):
                 lower_bound += 1
             # Assert right bound consists of covered cells
-            if not all(is_covered(new.top_left.x, y) for y in range(upper_bound + 1, lower_bound)):
+            if not all(
+                is_covered(new.top_left.x, y)
+                for y in range(upper_bound + 1, lower_bound)
+            ):
                 continue
             left_bound = cell[0]
             visited_numbers = 0
             failed = False
             while not failed:
                 # Check for upper bound
-                if left_bound < cell[0] and any(is_covered(left_bound, y) for y in range(upper_bound + 1, lower_bound)):
+                if left_bound < cell[0] and any(
+                    is_covered(left_bound, y)
+                    for y in range(upper_bound + 1, lower_bound)
+                ):
                     break
-                if not is_covered(left_bound, upper_bound) or not is_covered(left_bound, lower_bound):
+                if not is_covered(left_bound, upper_bound) or not is_covered(
+                    left_bound, lower_bound
+                ):
                     failed = True
                     break
-                visited_numbers += sum(bool(self.numbers[y][left_bound]) for y in range(upper_bound + 1, lower_bound))
+                visited_numbers += sum(
+                    bool(self.numbers[y][left_bound])
+                    for y in range(upper_bound + 1, lower_bound)
+                )
                 if visited_numbers > 1:
                     failed = True
                     break
                 # Remove visited cells
-                left = [cell for cell in left if not (upper_bound < cell[1] < lower_bound and cell[0] == left_bound)]
+                left = [
+                    cell
+                    for cell in left
+                    if not (
+                        upper_bound < cell[1] < lower_bound and cell[0] == left_bound
+                    )
+                ]
                 left_bound -= 1
 
             if failed or visited_numbers != 1:
                 continue
-            if all(is_covered(left_bound, y) for y in range(upper_bound + 1, lower_bound)) and \
-                (lower_bound - upper_bound - 1 + new.top_left.x - left_bound - 1) > 2:
-                implicit_rects.append(Rect(Point(left_bound + 1, upper_bound + 1), Point(new.top_left.x - 1, lower_bound - 1)))
+            if (
+                all(
+                    is_covered(left_bound, y)
+                    for y in range(upper_bound + 1, lower_bound)
+                )
+                and (lower_bound - upper_bound - 1 + new.top_left.x - left_bound - 1)
+                > 2
+            ):
+                implicit_rects.append(
+                    Rect(
+                        Point(left_bound + 1, upper_bound + 1),
+                        Point(new.top_left.x - 1, lower_bound - 1),
+                    )
+                )
 
         for rect in implicit_rects:
             self._append_rect(rect)
@@ -732,11 +1001,15 @@ class Game:
 
     def delete_intersecting_point(self, point: Point) -> None:
         """Delete all existing rects that contain a given Point"""
-        self.delete_rects_by_indices([i for i, rect in enumerate(self.rects) if rect.contains_point(point)])
+        self.delete_rects_by_indices(
+            [i for i, rect in enumerate(self.rects) if rect.contains_point(point)]
+        )
 
     def delete_intersecting_rect(self, other: Rect) -> None:
         """Remove existing rects that intersect with a given rect"""
-        intersecting = [i for i, rect in enumerate(self.rects) if rect.intersects(other)]
+        intersecting = [
+            i for i, rect in enumerate(self.rects) if rect.intersects(other)
+        ]
         self.delete_rects_by_indices(intersecting)
 
     def delete_rects_by_indices(self, indices: list[int]) -> None:
@@ -749,21 +1022,33 @@ class Game:
                     self.covered[y][x] = 0
 
     def verify(self) -> bool:
-        return all(rect.verify(self.numbers) for rect in self.rects) and self.rect_area == self.grid_area
+        return (
+            all(rect.verify(self.numbers) for rect in self.rects)
+            and self.rect_area == self.grid_area
+        )
+
 
 def empty_square_grid(size) -> list[list[int]]:
     return [[0 for _ in range(size)] for _ in range(size)]
 
+
 def pos_to_cell(pos, grid_pos) -> tuple[int, int]:
-    return (int((pos[0] - grid_pos[0]) / CELL_SIZE), int((pos[1] - grid_pos[1]) / CELL_SIZE))
+    return (
+        int((pos[0] - grid_pos[0]) / CELL_SIZE),
+        int((pos[1] - grid_pos[1]) / CELL_SIZE),
+    )
 
 
 def main():
     pygame.font.init()
 
     game = Game(GRID_SIZE)
-    screen = pygame.display.set_mode([game.total_size + GRID_DRAWING_POS[0] * 2,
-        game.total_size + GRID_DRAWING_POS[1] * 2])
+    screen = pygame.display.set_mode(
+        [
+            game.total_size + GRID_DRAWING_POS[0] * 2,
+            game.total_size + GRID_DRAWING_POS[1] * 2,
+        ]
+    )
     pygame.display.set_caption(CAPTION)
 
     clock = pygame.time.Clock()
@@ -776,7 +1061,8 @@ def main():
             game = Game(GRID_SIZE)
         screen.fill(BACKGROUND_COLOR)
         game.draw(screen, GRID_DRAWING_POS)
-        pygame.display.flip() 
+        pygame.display.flip()
+
 
 if __name__ == "__main__":
     main()
