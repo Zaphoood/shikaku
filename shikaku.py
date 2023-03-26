@@ -2,14 +2,14 @@
 from __future__ import annotations
 
 import os
-
-os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "hide"
 from enum import Enum, auto
 from random import randrange
 from typing import Optional
 
-import pygame
 from screeninfo import get_monitors
+
+os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "hide"
+import pygame  # noqa: E402
 
 
 class InputMethod(Enum):
@@ -223,7 +223,7 @@ class NumberRenderer:
             self.name = ""
             self.font_obj = pygame.font.Font(font_path, font_size)
         else:
-            if not font_name in pygame.font.get_fonts():
+            if font_name not in pygame.font.get_fonts():
                 print(f"Font not available: '{font_name}'. Using fallback.")
             self.name = font_name
             self.font_obj = pygame.font.SysFont(font_name, font_size)
@@ -236,7 +236,7 @@ class NumberRenderer:
         """Return a Surface with the rendered bitmap of the given number.
 
         If possible, already cached results will be used."""
-        if not number in self.render_cache:
+        if number not in self.render_cache:
             self.render_cache[number] = self._render(number)
         return self.render_cache[number]
 
@@ -670,10 +670,10 @@ class Game:
         # Invalid rectangles are thereby highlighted
         on_top = []
         for i, rect in enumerate(self.rects):
-            if rect.is_valid() == False:
-                on_top.append(i)
-            else:
+            if rect.is_valid():
                 rect.draw(screen, pos)
+            else:
+                on_top.append(i)
         for i in on_top:
             self.rects[i].draw(screen, pos)
 
