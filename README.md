@@ -8,9 +8,12 @@ You have to divide the grid into rectangular pieces such that each piece contain
 
 ## Setup
 
-You will need Python 3.10, as well as the pygame library. To install pygame, run
+Python version 3.10 is required.
+
+Install necessary packages with
+
 ```
-python -m pip install pygame
+python -m pip install -r requirements.txt
 ```
 
 ## Usage
